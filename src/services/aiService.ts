@@ -1,84 +1,41 @@
+import { db } from "../config/firebase-admin";
 import { getProductsForPlatform } from "./productService";
-import { db } from "../config/firebase";
-import axios from "axios";
 
-export async function recommendProducts(shopId: string, platform: string, userMessage: string) {
-  // 1 — Mağaza ayarlarını çek
-  const shopSnap = await db.collection("shops").doc(shopId).get();
-  const shop = shopSnap.data();
+export async function generateAIResponse(shopId: string, userMessage: string) {
+  try {
+    // 1) Mağaza ayarlarını çek
+    const settingsSnap = await db.collection("shops").doc(shopId).collection("settings").doc("general").get();
+    const settings = settingsSnap.exists ? settingsSnap.data() : null;
 
-  if (!shop) {
-    return { ok: false, error: "shop_not_found" };
-  }
+    // 2) Platform listesini çek
+    const platformsSnap = await db.collection("shops").doc(shopId).collection("platforms").get();
+    const platforms = platformsSnap.docs.map((d) => d.id);
 
-  const pkg = shop.packageType; // basic | pro
+    // 3) İlk platformdan ürünleri çek
+    const platform = platforms.length > 0 ? platforms[0] : "manual";
 
-  // BASIC paket → sadece 1 platform kullanabilir
-  if (pkg === "basic") {
-    if (shop.mainPlatform !== platform) {
-      return {
-        ok: false,
-        error: "basic_package_platform_mismatch",
-        message: `Bu mağaza sadece ${shop.mainPlatform} platformu ile çalışabilir.`,
-      };
-    }
-  }
+    // ❗ IMPORTANT — getProductsForPlatform sadece 1 argüman alır
+    const products = await getProductsForPlatform(platform);
 
-  // PRO paket → tüm platformları açabilir
-  if (pkg === "pro") {
-    if (!shop.platforms || !shop.platforms[platform]) {
-      return {
-        ok: false,
-        error: "platform_disabled_in_pro",
-        message: `${platform} bu mağazada aktif değil.`,
-      };
-    }
-  }
+    // 4) Basit AI cevabı (sen sonra LMStudio bağlayacaksın)
+    const aiReply = `
+Mağaza: ${settings?.storeName || "Bu mağaza"}
 
-  // 2 — Platform ürünlerini al
-  const products = await getProductsForPlatform(shopId, platform);
+Mesaj: ${userMessage}
 
-  if (products.length === 0) {
+Toplam ürün sayısı: ${products.length}
+İlk ürün: ${products[0]?.title || "Ürün bulunamadı"}
+    `;
+
     return {
-      ok: false,
-      error: "no_products_found",
-      message: `${platform} için ürün kaydı yok.`,
+      success: true,
+      reply: aiReply.trim(),
+    };
+  } catch (err: any) {
+    console.error("AI Service Error →", err);
+    return {
+      success: false,
+      error: err.message,
     };
   }
-
-  // 3 — AI prompt
-  const prompt = `
-Kullanıcı mesajı: "${userMessage}"
-
-Aşağıdaki ürünlerden en uygun 5 tanesini seç:
-
-${JSON.stringify(products.slice(0, 80), null, 2)}
-
-Sadece şu formatta cevap ver:
-[
-  { "title": "", "price": "", "image": "", "link": "" }
-]
-`;
-
-  // 4 — LM Studio üzerinden AI çağrısı
-  const aiRes = await axios.post("http://localhost:1234/v1/chat/completions", {
-    model: "qwen",
-    messages: [{ role: "user", content: prompt }],
-  });
-
-  const raw = aiRes.data.choices[0].message.content;
-
-  let suggestions = [];
-
-  try {
-    suggestions = JSON.parse(raw);
-  } catch (err) {
-    return { ok: false, error: "ai_parse_error", raw };
-  }
-
-  return {
-    ok: true,
-    platform,
-    suggestions,
-  };
 }
