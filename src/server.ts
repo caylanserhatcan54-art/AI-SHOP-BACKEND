@@ -19,7 +19,7 @@ app.get("/api/health", (req, res) => {
 
 // ROUTES
 import { aiRouter } from "./routes/aiRouter";
-import { productsRouter } from "./routes/productsRouter";
+import { productsRouter } from "./routes/products";
 
 app.use("/ai", aiRouter);
 app.use("/products", productsRouter);

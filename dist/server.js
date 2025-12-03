@@ -19,9 +19,9 @@ app.get("/api/health", (req, res) => {
 });
 // ROUTES
 const aiRouter_1 = require("./routes/aiRouter");
-const productsRouter_1 = require("./routes/productsRouter");
+const products_1 = require("./routes/products");
 app.use("/ai", aiRouter_1.aiRouter);
-app.use("/products", productsRouter_1.productsRouter);
+app.use("/products", products_1.productsRouter);
 // PORT MUTLAKA ENV PORT OLMALI!
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => {
