@@ -3,12 +3,22 @@ import { db } from "../config/firebase-admin";
 
 export const publicRouter = Router();
 
-/**
- * --------------------------------------------------------
- * GET /api/public/shop-info?shop=serhat
- * Mağaza bilgilerini döndürür (AI chat ekranı için)
- * --------------------------------------------------------
- */
+/* --------------------------------------------------------
+ *  PING — Render health check endpoint
+ *  GET /api/public/ping
+ * -------------------------------------------------------- */
+publicRouter.get("/ping", (req, res) => {
+  return res.json({
+    ok: true,
+    message: "pong",
+    time: new Date().toISOString(),
+  });
+});
+
+/* --------------------------------------------------------
+ *  GET /api/public/shop-info?shop=serhat
+ *  Müşteri tarafı sohbet ekranı için mağaza bilgisi
+ * -------------------------------------------------------- */
 publicRouter.get("/shop-info", async (req, res) => {
   try {
     const shopId = String(req.query.shop || "").trim();
@@ -17,7 +27,6 @@ publicRouter.get("/shop-info", async (req, res) => {
       return res.json({ ok: false, error: "missing_shop" });
     }
 
-    // Firestore: mağaza/{shopId}
     const shopRef = db.collection("mağaza").doc(shopId);
     const snap = await shopRef.get();
 
@@ -39,7 +48,7 @@ publicRouter.get("/shop-info", async (req, res) => {
         categories: data.categories || [],
         welcomeMessage:
           data.welcomeMessage ||
-          "Merhaba, mağazamıza hoş geldiniz! Size nasıl yardımcı olabilirim?",
+          "Merhaba! Size nasıl yardımcı olabilirim?",
         themeColor: data.themeColor || "#0066ff",
       },
     });
@@ -49,13 +58,10 @@ publicRouter.get("/shop-info", async (req, res) => {
   }
 });
 
-/**
- * --------------------------------------------------------
- * POST /api/public/shop-settings
- * Body: { shopId, name?, logo?, welcomeMessage?, themeColor?, categories? }
- * Mağaza AI ayarlarını kaydeder (panelden)
- * --------------------------------------------------------
- */
+/* --------------------------------------------------------
+ *  POST /api/public/shop-settings
+ *  Panelde mağaza AI ayarlarını kaydetmek için
+ * -------------------------------------------------------- */
 publicRouter.post("/shop-settings", async (req, res) => {
   try {
     const {
