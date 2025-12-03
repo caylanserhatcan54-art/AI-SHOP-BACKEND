@@ -10,8 +10,11 @@ dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
-// HEALTH CHECK
+// HEALTH CHECK (her iki endpoint'e de cevap verir)
 app.get("/health", (req, res) => {
+    res.json({ ok: true, status: "healthy" });
+});
+app.get("/api/health", (req, res) => {
     res.json({ ok: true, status: "healthy" });
 });
 // ROUTES

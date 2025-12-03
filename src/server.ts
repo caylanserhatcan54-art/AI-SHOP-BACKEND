@@ -8,8 +8,12 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// HEALTH CHECK
+// HEALTH CHECK (her iki endpoint'e de cevap verir)
 app.get("/health", (req, res) => {
+  res.json({ ok: true, status: "healthy" });
+});
+
+app.get("/api/health", (req, res) => {
   res.json({ ok: true, status: "healthy" });
 });
 
