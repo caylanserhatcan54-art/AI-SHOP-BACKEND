@@ -4,19 +4,27 @@ exports.publicRouter = void 0;
 const express_1 = require("express");
 const firebase_admin_1 = require("../config/firebase-admin");
 exports.publicRouter = (0, express_1.Router)();
-/**
- * --------------------------------------------------------
- * GET /api/public/shop-info?shop=serhat
- * Mağaza bilgilerini döndürür (AI chat ekranı için)
- * --------------------------------------------------------
- */
+/* --------------------------------------------------------
+ *  PING — Render health check endpoint
+ *  GET /api/public/ping
+ * -------------------------------------------------------- */
+exports.publicRouter.get("/ping", (req, res) => {
+    return res.json({
+        ok: true,
+        message: "pong",
+        time: new Date().toISOString(),
+    });
+});
+/* --------------------------------------------------------
+ *  GET /api/public/shop-info?shop=serhat
+ *  Müşteri tarafı sohbet ekranı için mağaza bilgisi
+ * -------------------------------------------------------- */
 exports.publicRouter.get("/shop-info", async (req, res) => {
     try {
         const shopId = String(req.query.shop || "").trim();
         if (!shopId) {
             return res.json({ ok: false, error: "missing_shop" });
         }
-        // Firestore: mağaza/{shopId}
         const shopRef = firebase_admin_1.db.collection("mağaza").doc(shopId);
         const snap = await shopRef.get();
         if (!snap.exists) {
@@ -34,7 +42,7 @@ exports.publicRouter.get("/shop-info", async (req, res) => {
                 logo: data.logo || null,
                 categories: data.categories || [],
                 welcomeMessage: data.welcomeMessage ||
-                    "Merhaba, mağazamıza hoş geldiniz! Size nasıl yardımcı olabilirim?",
+                    "Merhaba! Size nasıl yardımcı olabilirim?",
                 themeColor: data.themeColor || "#0066ff",
             },
         });
@@ -44,13 +52,10 @@ exports.publicRouter.get("/shop-info", async (req, res) => {
         return res.json({ ok: false, error: "shop_info_failed" });
     }
 });
-/**
- * --------------------------------------------------------
- * POST /api/public/shop-settings
- * Body: { shopId, name?, logo?, welcomeMessage?, themeColor?, categories? }
- * Mağaza AI ayarlarını kaydeder (panelden)
- * --------------------------------------------------------
- */
+/* --------------------------------------------------------
+ *  POST /api/public/shop-settings
+ *  Panelde mağaza AI ayarlarını kaydetmek için
+ * -------------------------------------------------------- */
 exports.publicRouter.post("/shop-settings", async (req, res) => {
     try {
         const { shopId, name, logo, welcomeMessage, themeColor, categories, } = req.body || {};

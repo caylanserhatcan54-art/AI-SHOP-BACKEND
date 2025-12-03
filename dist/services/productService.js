@@ -1,21 +1,22 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.productService = exports.ProductService = void 0;
+exports.getProductsForPlatform = getProductsForPlatform;
 const firebase_admin_1 = require("../config/firebase-admin");
-class ProductService {
-    async getProducts(shopId) {
-        const ref = firebase_admin_1.db.collection("shops").doc(shopId).collection("products");
-        const snap = await ref.get();
-        return snap.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+async function getProductsForPlatform(shopId) {
+    try {
+        const snap = await firebase_admin_1.db
+            .collection("shops")
+            .doc(shopId)
+            .collection("products")
+            .get();
+        let products = [];
+        snap.forEach((doc) => {
+            products.push({ id: doc.id, ...doc.data() });
+        });
+        return products;
     }
-    async addProduct(shopId, product) {
-        const ref = firebase_admin_1.db.collection("shops").doc(shopId).collection("products");
-        await ref.add(product);
-        return true;
+    catch (err) {
+        console.error("getProductsForPlatform ERROR:", err);
+        return [];
     }
 }
-exports.ProductService = ProductService;
-exports.productService = new ProductService();

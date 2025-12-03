@@ -1,41 +1,59 @@
-import { db } from "../config/firebase-admin";
-import { getProductsForPlatform } from "./productService";
+import fetch from "node-fetch";
 
-export async function generateAIResponse(shopId: string, userMessage: string) {
+// AI Yanıt Üretici Servis
+export async function generateAIReply(
+  shopId: string,
+  message: string,
+  history: any[]
+) {
   try {
-    // 1) Mağaza ayarlarını çek
-    const settingsSnap = await db.collection("shops").doc(shopId).collection("settings").doc("general").get();
-    const settings = settingsSnap.exists ? settingsSnap.data() : null;
+    const LM_URL = process.env.LMSTUDIO_API_URL!;
+    const MODEL = process.env.LM_MODEL!;
 
-    // 2) Platform listesini çek
-    const platformsSnap = await db.collection("shops").doc(shopId).collection("platforms").get();
-    const platforms = platformsSnap.docs.map((d) => d.id);
+    console.log("🚀 LMStudio'ya istek gönderiliyor...");
+    console.log("📡 URL:", LM_URL);
+    console.log("🤖 MODEL:", MODEL);
 
-    // 3) İlk platformdan ürünleri çek
-    const platform = platforms.length > 0 ? platforms[0] : "manual";
+    // Mesaj formatı LMStudio için
+    const formattedHistory = history.map((m: any) => ({
+      role: m.sender === "user" ? "user" : "assistant",
+      content: m.text,
+    }));
 
-    // ❗ IMPORTANT — getProductsForPlatform sadece 1 argüman alır
-    const products = await getProductsForPlatform(platform);
-
-    // 4) Basit AI cevabı (sen sonra LMStudio bağlayacaksın)
-    const aiReply = `
-Mağaza: ${settings?.storeName || "Bu mağaza"}
-
-Mesaj: ${userMessage}
-
-Toplam ürün sayısı: ${products.length}
-İlk ürün: ${products[0]?.title || "Ürün bulunamadı"}
-    `;
-
-    return {
-      success: true,
-      reply: aiReply.trim(),
+    const body = {
+      model: MODEL,
+      messages: [
+        { role: "system", content: "You are FlowAI Assistant" },
+        ...formattedHistory,
+        { role: "user", content: message }
+      ]
     };
-  } catch (err: any) {
-    console.error("AI Service Error →", err);
-    return {
-      success: false,
-      error: err.message,
-    };
+
+    console.log("📤 SEND BODY:", JSON.stringify(body, null, 2));
+
+    const response = await fetch(LM_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
+
+    console.log("📡 LMStudio STATUS:", response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("❌ LMStudio RESPONSE ERROR:", errorText);
+      throw new Error("LMStudio API error");
+    }
+
+    const data = await response.json();
+    console.log("📥 LMStudio RAW RESPONSE:", data);
+
+    const reply =
+      data?.choices?.[0]?.message?.content || "Bir yanıt üretilemedi.";
+
+    return reply;
+  } catch (err) {
+    console.error("🔥 generateAIReply ERROR:", err);
+    throw err;
   }
 }
