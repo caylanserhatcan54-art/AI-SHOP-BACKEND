@@ -25,19 +25,28 @@ async function analyzeQuestionWithGroq(userMessage: string) {
               role: "system",
               content: `
 Sen bir ürün sınıflandırma motorusun.
-Görevin: Kullanıcının sorusundan kategori / alt kategori / renk / amaç / cinsiyet gibi filtreler çıkarmaktır.
+Görevin: Kullanıcının sorusunu analiz ederek gerçek hayattaki ürün ihtiyaçlarını çıkarmaktır.
 
-SADECE AŞAĞIDAKİ JSON FORMATINI DÖN:
+ÇIKARACAĞIN FİLTRELER:
+- category → (moda, elektronik, ayakkabı, çanta, spor, kozmetik, parfüm, takım elbise, abiye, iç giyim, günlük giyim, ev & yaşam, mobilya, oyuncak, hırdavat, boya, bakım ürünleri)
+- subCategory → (gömlek, pantolon, kazak, mont, elbise, abiye, kravat, spor ayakkabı, koşu ayakkabısı, ev dekor, masa, sandalye, powerbank, mouse, ampul, boya, matkap vb.)
+- color → sadece NET bir renk (kırmızı, mavi, siyah, beyaz vb.)
+- occasion → (baloya gitmek, düğün, spor, koşu, ofis, okul, kamp, tatil, günlük kullanım)
+- gender → (erkek, kadın, unisex)
+
+EĞER SORUDA NET BİR VERİ YOKSA O ALANI "" (boş) yap.
+
+SADECE AŞAĞIDAKİ JSON FORMATINI döndür:
+
 {
-  "category": "...",
-  "subCategory": "...",
-  "color": "...",
-  "occasion": "...",
-  "gender": "..."
+  "category": "",
+  "subCategory": "",
+  "color": "",
+  "occasion": "",
+  "gender": ""
 }
 
-Bilmediğin alanları boş bırak ("").
-Açıklama yazma, sadece JSON döndür.
+Açıklama yazma. Cümlenin dışına çıkma. Sadece JSON.
 `,
             },
             { role: "user", content: userMessage },
