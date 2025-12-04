@@ -3,96 +3,79 @@ import { db } from "../config/firebase-admin";
 
 export const publicRouter = Router();
 
-/* --------------------------------------------------------
- *  PING — Render health check endpoint
- *  GET /api/public/ping
- * -------------------------------------------------------- */
-publicRouter.get("/ping", (req, res) => {
-  return res.json({
-    ok: true,
-    message: "pong",
-    time: new Date().toISOString(),
-  });
-});
-
-/* --------------------------------------------------------
- *  GET /api/public/shop-info?shop=serhat
- *  Müşteri tarafı sohbet ekranı için mağaza bilgisi
- * -------------------------------------------------------- */
-publicRouter.get("/shop-info", async (req, res) => {
+/**
+ * Public shop info endpoint
+ * GET /api/public/shop/:shopId
+ */
+publicRouter.get("/shop/:shopId", async (req, res) => {
   try {
-    const shopId = String(req.query.shop || "").trim();
+    const shopId = req.params.shopId;
 
-    if (!shopId) {
-      return res.json({ ok: false, error: "missing_shop" });
+    console.log("\n========================================");
+    console.log("📌 İstek Alındı → /shop/" + shopId);
+
+    // 🔥 Bağlı olunan Firebase projesi
+    console.log("🔥 FIREBASE PROJECT:", db.app.options.projectId);
+
+    // 🔥 Firestore root koleksiyonları göster
+    const rootCollections = await db.listCollections();
+    console.log(
+      "🔥 ROOT COLLECTIONS:",
+      rootCollections.map((c) => c.id)
+    );
+
+    // 🔥 Doğru koleksiyon adı → "mağazalar"
+    const shopRef = db.collection("mağazalar").doc(shopId);
+    const shopSnap = await shopRef.get();
+
+    if (!shopSnap.exists) {
+      console.log("❌ Belge bulunamadı:", `mağazalar/${shopId}`);
+      console.log("========================================\n");
+      return res.json({ ok: false, error: "shop_not_found" });
     }
 
-    const shopRef = db.collection("mağaza").doc(shopId);
-    const snap = await shopRef.get();
+    const shopData = shopSnap.data() || {};
 
-    if (!snap.exists) {
-      return res.json({
-        ok: false,
-        error: "shop_not_found",
+    // 🔥 platformlar alt koleksiyonu
+    const platformsRef = shopRef.collection("platformlar");
+    const platformsSnap = await platformsRef.get();
+
+    let platforms: any[] = [];
+
+    for (let doc of platformsSnap.docs) {
+      const platformName = doc.id;
+
+      // ürünler alt koleksiyonu
+      const productsSnap = await platformsRef
+        .doc(platformName)
+        .collection("ürünler")
+        .get();
+
+      const products = productsSnap.docs.map((p) => ({
+        id: p.id,
+        ...p.data(),
+      }));
+
+      platforms.push({
+        platform: platformName,
+        products,
       });
     }
 
-    const data = snap.data() || {};
+    console.log("✅ Mağaza bulundu:", `mağazalar/${shopId}`);
+    console.log("========================================\n");
 
     return res.json({
       ok: true,
       shop: {
         id: shopId,
-        name: data.name || shopId,
-        logo: data.logo || null,
-        categories: data.categories || [],
-        welcomeMessage:
-          data.welcomeMessage ||
-          "Merhaba! Size nasıl yardımcı olabilirim?",
-        themeColor: data.themeColor || "#0066ff",
+        ...shopData,
       },
-    });
-  } catch (err) {
-    console.error("SHOP-INFO ERROR:", err);
-    return res.json({ ok: false, error: "shop_info_failed" });
-  }
-});
-
-/* --------------------------------------------------------
- *  POST /api/public/shop-settings
- *  Panelde mağaza AI ayarlarını kaydetmek için
- * -------------------------------------------------------- */
-publicRouter.post("/shop-settings", async (req, res) => {
-  try {
-    const {
-      shopId,
-      name,
-      logo,
-      welcomeMessage,
-      themeColor,
-      categories,
-    } = req.body || {};
-
-    if (!shopId) {
-      return res.json({ ok: false, error: "missing_shopId" });
-    }
-
-    const updateData: any = {};
-
-    if (name !== undefined) updateData.name = String(name);
-    if (logo !== undefined) updateData.logo = String(logo);
-    if (welcomeMessage !== undefined)
-      updateData.welcomeMessage = String(welcomeMessage);
-    if (themeColor !== undefined) updateData.themeColor = String(themeColor);
-    if (Array.isArray(categories)) updateData.categories = categories;
-
-    await db.collection("mağaza").doc(String(shopId)).set(updateData, {
-      merge: true,
+      platforms,
     });
 
-    return res.json({ ok: true });
   } catch (err) {
-    console.error("SHOP-SETTINGS ERROR:", err);
-    return res.json({ ok: false, error: "shop_settings_failed" });
+    console.error("🚨 PUBLIC_SHOP_ERROR:", err);
+    return res.json({ ok: false, error: "server_error" });
   }
 });

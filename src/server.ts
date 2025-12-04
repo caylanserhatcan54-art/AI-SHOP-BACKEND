@@ -1,34 +1,24 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-
 dotenv.config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// HEALTH CHECK
-app.get("/health", (req, res) => {
-  res.json({ ok: true, status: "healthy" });
-});
+// HEALTH
+app.get("/health", (req, res) => res.json({ ok: true }));
 
-// ROOT CHECK  ← BUNU EKLİYORUZ
-app.get("/", (req, res) => {
-  res.json({ ok: true, message: "FlowAI Backend Active ✔" });
-});
+// ROOT
+app.get("/", (req, res) => res.json({ ok: true, msg: "backend aktif" }));
 
 // ROUTES
+import { publicRouter } from "./routes/public";
 import { aiRouter } from "./routes/aiRouter";
-import { productsRouter } from "./routes/products";
 
+app.use("/api/public", publicRouter);
+app.use("/api/ai", aiRouter);
 
-app.use("/ai", aiRouter);
-app.use("/products", productsRouter);
-
-// PORT MUTLAKA ENV PORT OLMALI!
 const PORT = process.env.PORT || 4000;
-
-app.listen(PORT, () => {
-  console.log(`🚀 Backend çalışıyor → http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log("Backend running:", PORT));
