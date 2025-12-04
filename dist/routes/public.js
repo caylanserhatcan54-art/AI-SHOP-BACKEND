@@ -8,16 +8,17 @@ const express_1 = require("express");
 const firebase_admin_1 = require("../config/firebase-admin");
 const firebase_admin_2 = __importDefault(require("firebase-admin"));
 exports.publicRouter = (0, express_1.Router)();
+/**
+ * GET /api/public/shop/:shopId
+ * Public mağaza bilgisi + platformlar + ürünler
+ */
 exports.publicRouter.get("/shop/:shopId", async (req, res) => {
     try {
         const shopId = req.params.shopId;
         console.log("\n========================================");
         console.log("📌 İstek Alındı → /shop/" + shopId);
-        // 🔥 Firestore projesi
         console.log("🔥 FIREBASE PROJECT:", firebase_admin_2.default.app().options.projectId);
-        // 🔥 Tüm koleksiyonları listele
-        const rootCollections = await firebase_admin_1.db.listCollections();
-        console.log("🔥 ROOT COLLECTIONS:", rootCollections.map((c) => c.id));
+        // 🔥 Mağaza referansı
         const shopRef = firebase_admin_1.db.collection("mağazalar").doc(shopId);
         const shopSnap = await shopRef.get();
         if (!shopSnap.exists) {
@@ -26,25 +27,37 @@ exports.publicRouter.get("/shop/:shopId", async (req, res) => {
             return res.json({ ok: false, error: "shop_not_found" });
         }
         const shopData = shopSnap.data() || {};
+        // 🔥 Platformları çek
         const platformsRef = shopRef.collection("platformlar");
         const platformsSnap = await platformsRef.get();
         let platforms = [];
         for (let doc of platformsSnap.docs) {
-            const platformName = doc.id;
+            const rawPlatformId = doc.id;
+            // platform adı normalize et (trendyol.com → trendyol)
+            const cleanPlatformName = rawPlatformId
+                .replace(".com", "")
+                .replace(".net", "")
+                .replace(".org", "")
+                .replace("www.", "")
+                .trim();
+            console.log("🔎 Platform bulundu:", rawPlatformId, "→", cleanPlatformName);
+            // Ürünleri çek (ID URL encode olsa bile Firestore sorunsuz çeker!)
             const productsSnap = await platformsRef
-                .doc(platformName)
+                .doc(rawPlatformId)
                 .collection("ürünler")
                 .get();
-            const products = productsSnap.docs.map((p) => ({
-                id: p.id,
-                ...p.data(),
-            }));
+            const products = productsSnap.docs.map((p) => {
+                return {
+                    id: p.id,
+                    ...p.data(),
+                };
+            });
             platforms.push({
-                platform: platformName,
+                platform: cleanPlatformName,
                 products,
             });
         }
-        console.log("✅ Mağaza bulundu:", `mağazalar/${shopId}`);
+        console.log("✅ Mağaza ve platformlar başarıyla bulundu.");
         console.log("========================================\n");
         return res.json({
             ok: true,

@@ -6,7 +6,6 @@ export const publicRouter = Router();
 
 /**
  * GET /api/public/shop/:shopId
- * Public mağaza bilgisi + platformlar + ürünler
  */
 publicRouter.get("/shop/:shopId", async (req, res) => {
   try {
@@ -14,21 +13,18 @@ publicRouter.get("/shop/:shopId", async (req, res) => {
 
     console.log("\n========================================");
     console.log("📌 İstek Alındı → /shop/" + shopId);
-    console.log("🔥 FIREBASE PROJECT:", admin.app().options.projectId);
 
-    // 🔥 Mağaza referansı
     const shopRef = db.collection("mağazalar").doc(shopId);
     const shopSnap = await shopRef.get();
 
     if (!shopSnap.exists) {
       console.log("❌ Belge bulunamadı:", `mağazalar/${shopId}`);
-      console.log("========================================\n");
       return res.json({ ok: false, error: "shop_not_found" });
     }
 
     const shopData = shopSnap.data() || {};
 
-    // 🔥 Platformları çek
+    // PLATFORMLARI AL
     const platformsRef = shopRef.collection("platformlar");
     const platformsSnap = await platformsRef.get();
 
@@ -37,7 +33,7 @@ publicRouter.get("/shop/:shopId", async (req, res) => {
     for (let doc of platformsSnap.docs) {
       const rawPlatformId = doc.id;
 
-      // platform adı normalize et (trendyol.com → trendyol)
+      // Platformu görünüş için temizle
       const cleanPlatformName = rawPlatformId
         .replace(".com", "")
         .replace(".net", "")
@@ -45,28 +41,27 @@ publicRouter.get("/shop/:shopId", async (req, res) => {
         .replace("www.", "")
         .trim();
 
-      console.log("🔎 Platform bulundu:", rawPlatformId, "→", cleanPlatformName);
+      console.log("🔎 Platform:", rawPlatformId, "→ gösterim:", cleanPlatformName);
 
-      // Ürünleri çek (ID URL encode olsa bile Firestore sorunsuz çeker!)
+      // ÜRÜNLERİ ÇEK (Firestore'dan HER ZAMAN RAW ID ile çekmeliyiz)
       const productsSnap = await platformsRef
-        .doc(rawPlatformId)
+        .doc(rawPlatformId)   // ✔ DOĞRU PATH
         .collection("ürünler")
         .get();
 
-      const products = productsSnap.docs.map((p) => {
-        return {
-          id: p.id,
-          ...p.data(),
-        };
-      });
+      const products = productsSnap.docs.map((p) => ({
+        id: p.id,
+        ...p.data(),
+      }));
 
       platforms.push({
-        platform: cleanPlatformName,
+        platform: cleanPlatformName, // müşteriye görünen isim
+        rawPlatformId,               // gerçek platform ID (istersen kaldırabiliriz)
         products,
       });
     }
 
-    console.log("✅ Mağaza ve platformlar başarıyla bulundu.");
+    console.log("✅ Platformlar ve ürünler bulundu.");
     console.log("========================================\n");
 
     return res.json({
@@ -74,6 +69,7 @@ publicRouter.get("/shop/:shopId", async (req, res) => {
       shop: { id: shopId, ...shopData },
       platforms,
     });
+
   } catch (err) {
     console.error("🚨 PUBLIC_SHOP_ERROR:", err);
     return res.json({ ok: false, error: "server_error" });
