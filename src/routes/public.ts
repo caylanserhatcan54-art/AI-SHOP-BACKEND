@@ -4,23 +4,19 @@ import admin from "firebase-admin";
 
 export const publicRouter = Router();
 
+/**
+ * GET /api/public/shop/:shopId
+ * Public mağaza bilgisi + platformlar + ürünler
+ */
 publicRouter.get("/shop/:shopId", async (req, res) => {
   try {
     const shopId = req.params.shopId;
 
     console.log("\n========================================");
     console.log("📌 İstek Alındı → /shop/" + shopId);
-
-    // 🔥 Firestore projesi
     console.log("🔥 FIREBASE PROJECT:", admin.app().options.projectId);
 
-    // 🔥 Tüm koleksiyonları listele
-    const rootCollections = await db.listCollections();
-    console.log(
-      "🔥 ROOT COLLECTIONS:",
-      rootCollections.map((c) => c.id)
-    );
-
+    // 🔥 Mağaza referansı
     const shopRef = db.collection("mağazalar").doc(shopId);
     const shopSnap = await shopRef.get();
 
@@ -32,31 +28,45 @@ publicRouter.get("/shop/:shopId", async (req, res) => {
 
     const shopData = shopSnap.data() || {};
 
+    // 🔥 Platformları çek
     const platformsRef = shopRef.collection("platformlar");
     const platformsSnap = await platformsRef.get();
 
     let platforms: any[] = [];
 
     for (let doc of platformsSnap.docs) {
-      const platformName = doc.id;
+      const rawPlatformId = doc.id;
 
+      // platform adı normalize et (trendyol.com → trendyol)
+      const cleanPlatformName = rawPlatformId
+        .replace(".com", "")
+        .replace(".net", "")
+        .replace(".org", "")
+        .replace("www.", "")
+        .trim();
+
+      console.log("🔎 Platform bulundu:", rawPlatformId, "→", cleanPlatformName);
+
+      // Ürünleri çek (ID URL encode olsa bile Firestore sorunsuz çeker!)
       const productsSnap = await platformsRef
-        .doc(platformName)
+        .doc(rawPlatformId)
         .collection("ürünler")
         .get();
 
-      const products = productsSnap.docs.map((p) => ({
-        id: p.id,
-        ...p.data(),
-      }));
+      const products = productsSnap.docs.map((p) => {
+        return {
+          id: p.id,
+          ...p.data(),
+        };
+      });
 
       platforms.push({
-        platform: platformName,
+        platform: cleanPlatformName,
         products,
       });
     }
 
-    console.log("✅ Mağaza bulundu:", `mağazalar/${shopId}`);
+    console.log("✅ Mağaza ve platformlar başarıyla bulundu.");
     console.log("========================================\n");
 
     return res.json({
@@ -64,7 +74,6 @@ publicRouter.get("/shop/:shopId", async (req, res) => {
       shop: { id: shopId, ...shopData },
       platforms,
     });
-
   } catch (err) {
     console.error("🚨 PUBLIC_SHOP_ERROR:", err);
     return res.json({ ok: false, error: "server_error" });
