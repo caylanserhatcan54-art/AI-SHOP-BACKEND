@@ -1,4 +1,5 @@
 import express from "express";
+import axios from "axios";
 import { getFirestore } from "firebase-admin/firestore";
 
 export const aiRouter = express.Router();
@@ -12,7 +13,6 @@ aiRouter.post("/chat", async (req, res) => {
       return res.status(400).json({ ok: false, error: "shopId_missing" });
     }
 
-    // --- Mağaza kontrol ---
     const shopRef = db.collection("magazalar").doc(shopId);
     const shopSnap = await shopRef.get();
 
@@ -20,13 +20,11 @@ aiRouter.post("/chat", async (req, res) => {
       return res.status(404).json({ ok: false, error: "shop_not_found" });
     }
 
-    // --- Ürünleri çek ---
     const platformsSnap = await shopRef.collection("platformlar").get();
     const allProducts: any[] = [];
 
     for (const platformDoc of platformsSnap.docs) {
       const productsSnap = await platformDoc.ref.collection("urunler").get();
-
       productsSnap.forEach((p) => {
         allProducts.push({
           ...p.data(),
@@ -41,53 +39,44 @@ aiRouter.post("/chat", async (req, res) => {
           (p) =>
             `• ${p.title} | ${p.price || ""} | ${p.url} | Platform: ${p.platform}`
         )
-        .join("\n") || "Bu mağazada ürün yok.";
+        .join("\n") || "Bu mağazada hiç ürün yok.";
 
-    // === PROMPT ===
     const systemPrompt = `
 Sen FlowAI'nın e-ticaret satış asistanısın.
-
 Kurallar:
 - Sadece aşağıdaki ürün listesini kullan.
-- Ürün linklerini mutlaka ver.
+- Linkleri mutlaka göster.
 - Liste dışı ürün uydurma.
 
-Mağazanın ürünleri:
-
+Mağaza Ürünleri:
 ${productListString}
 `;
 
-    // --- Mesaj formatı ---
     const groqMessages = [
       { role: "system", content: systemPrompt },
       ...messages,
     ];
 
-    // === 🔥 GROQ API İSTEĞİ ===
-    const groqResponse = await fetch(
+    // 🔥 FETCH DEĞİL — ARTIK AXIOS KULLANIYORUZ
+    const groqResponse = await axios.post(
       "https://api.groq.com/openai/v1/chat/completions",
       {
-        method: "POST",
+        model: process.env.GROQ_MODEL,
+        messages: groqMessages,
+      },
+      {
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
         },
-        body: JSON.stringify({
-          model: process.env.GROQ_MODEL,
-          messages: groqMessages,
-        }),
       }
     );
 
-    const data = await groqResponse.json();
-    console.log("🔥 Groq Response:", data);
+    const data = groqResponse.data;
 
-    // === 🔥 100% Güvenli cevap çıkarma ===
-    let reply = "Yanıt oluşturulamadı.";
-
-    if (data?.choices?.[0]?.message?.content) {
-      reply = data.choices[0].message.content;
-    }
+    const reply =
+      data?.choices?.[0]?.message?.content ||
+      "AI yanıtı alınamadı (Groq boş yanıt verdi).";
 
     return res.json({
       ok: true,
@@ -95,7 +84,9 @@ ${productListString}
       productCount: allProducts.length,
     });
   } catch (err: any) {
-    console.error("AI Chat Error:", err);
-    return res.status(500).json({ ok: false, error: err.message });
+    console.error("AI Chat Error:", err.response?.data || err);
+    return res
+      .status(500)
+      .json({ ok: false, error: err.response?.data || err.message });
   }
 });
