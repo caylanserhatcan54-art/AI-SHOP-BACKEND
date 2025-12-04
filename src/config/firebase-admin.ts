@@ -1,10 +1,13 @@
 import admin from "firebase-admin";
-import service from "../serviceAccount.json";
 
-if (admin.apps.length === 0) {
+if (!admin.apps.length) {
+  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT as string);
+
   admin.initializeApp({
-    credential: admin.credential.cert(service as any),
+    credential: admin.credential.cert(serviceAccount),
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
   });
 }
 
 export const db = admin.firestore();
+export const bucket = admin.storage().bucket();
