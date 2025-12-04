@@ -11,17 +11,16 @@ publicRouter.get("/shop/:shopId", async (req, res) => {
     console.log("\n========================================");
     console.log("📌 İstek Alındı → /shop/" + shopId);
 
-    // 🔥 DOĞRU DEBUG — Admin SDK üzerinden projectId alma
+    // 🔥 Firestore projesi
     console.log("🔥 FIREBASE PROJECT:", admin.app().options.projectId);
 
-    // 🔥 Firestore root koleksiyonlarını göster
+    // 🔥 Tüm koleksiyonları listele
     const rootCollections = await db.listCollections();
     console.log(
       "🔥 ROOT COLLECTIONS:",
       rootCollections.map((c) => c.id)
     );
 
-    // mağazalar
     const shopRef = db.collection("mağazalar").doc(shopId);
     const shopSnap = await shopRef.get();
 
@@ -33,7 +32,6 @@ publicRouter.get("/shop/:shopId", async (req, res) => {
 
     const shopData = shopSnap.data() || {};
 
-    // platformlar
     const platformsRef = shopRef.collection("platformlar");
     const platformsSnap = await platformsRef.get();
 
