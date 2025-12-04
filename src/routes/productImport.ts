@@ -1,13 +1,8 @@
 import { Router } from "express";
-import { getFirestore } from "firebase-admin/firestore";
+import { db } from "../config/firebase-admin";
 
 const router = Router();
-const db = getFirestore();
 
-/**
- * Ürün Import Endpointi
- * POST /products/import
- */
 router.post("/import", async (req, res) => {
   try {
     const { shopId, platform, products } = req.body;
@@ -15,56 +10,39 @@ router.post("/import", async (req, res) => {
     if (!shopId || !platform || !Array.isArray(products)) {
       return res.status(400).json({
         ok: false,
-        error: "Eksik parametreler: shopId, platform, products gerekli.",
+        error: "Eksik parametreler: shopId, platform, products",
       });
     }
 
     const shopRef = db.collection("magazalar").doc(shopId);
     const platformRef = shopRef.collection("platformlar").doc(platform);
 
-    // Mağaza dokümanı yoksa otomatik oluştur
     await shopRef.set(
-      {
-        id: shopId,
-        updatedAt: Date.now(),
-      },
+      { id: shopId, updatedAt: Date.now() },
       { merge: true }
     );
 
-    // Platform dokümanı yoksa oluşturalım
     await platformRef.set(
-      {
-        platform: platform,
-        updatedAt: Date.now(),
-      },
+      { platform, updatedAt: Date.now() },
       { merge: true }
     );
 
     let savedCount = 0;
 
     for (const p of products) {
-      if (!p.productId) continue;
-
       const productRef = platformRef.collection("urunler").doc(p.productId);
-
       await productRef.set(
-        {
-          ...p,
-          productId: p.productId,
-          importedAt: Date.now(),
-        },
+        { ...p, importedAt: Date.now() },
         { merge: true }
       );
-
       savedCount++;
     }
 
     return res.json({
       ok: true,
-      shopId,
-      platform,
       savedCount,
-      message: `${savedCount} ürün kaydedildi.`,
+      platform,
+      shopId,
     });
   } catch (err: any) {
     console.error("Import hata:", err);
