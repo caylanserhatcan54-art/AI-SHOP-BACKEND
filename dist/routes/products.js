@@ -108,6 +108,7 @@ exports.productsRouter.get("/list", async (req, res) => {
  * POST /products/ai/description
  */
 exports.productsRouter.post("/ai/description", async (req, res) => {
+    var _a, _b, _c;
     try {
         const { title, description, platform } = req.body;
         if (!title) {
@@ -153,7 +154,7 @@ Aşağıdaki formatta kısa ve net cevap ver:
             }),
         });
         const data = await response.json();
-        const output = data?.choices?.[0]?.message?.content ||
+        const output = ((_c = (_b = (_a = data === null || data === void 0 ? void 0 : data.choices) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.message) === null || _c === void 0 ? void 0 : _c.content) ||
             "AI modelinden yanıt alınamadı.";
         return res.json({
             ok: true,

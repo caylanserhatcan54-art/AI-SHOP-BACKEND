@@ -1,13 +1,9 @@
 import express from "express";
 import { getFirestore } from "firebase-admin/firestore";
-import fetch from "node-fetch";
 
 export const aiRouter = express.Router();
 const db = getFirestore();
 
-// ---------------------------------------------
-// GROQ + LLAMA3 AI CHAT
-// ---------------------------------------------
 aiRouter.post("/chat", async (req, res) => {
   try {
     const { shopId, messages } = req.body;
@@ -16,7 +12,7 @@ aiRouter.post("/chat", async (req, res) => {
       return res.status(400).json({ ok: false, error: "shopId_missing" });
     }
 
-    // 1) MAĞAZA VAR MI?
+    // --- Mağaza kontrol ---
     const shopRef = db.collection("magazalar").doc(shopId);
     const shopSnap = await shopRef.get();
 
@@ -24,22 +20,21 @@ aiRouter.post("/chat", async (req, res) => {
       return res.status(404).json({ ok: false, error: "shop_not_found" });
     }
 
-    // 2) TÜM ÜRÜNLERİ ÇEK
+    // --- Ürünleri çek ---
     const platformsSnap = await shopRef.collection("platformlar").get();
-
     const allProducts: any[] = [];
 
-    for (const p of platformsSnap.docs) {
-      const productsSnap = await p.ref.collection("urunler").get();
-      productsSnap.forEach((doc) =>
+    for (const platformDoc of platformsSnap.docs) {
+      const productsSnap = await platformDoc.ref.collection("urunler").get();
+
+      productsSnap.forEach((p) => {
         allProducts.push({
-          ...doc.data(),
-          platform: p.id,
-        })
-      );
+          ...p.data(),
+          platform: platformDoc.id,
+        });
+      });
     }
 
-    // 3) ÜRÜNLERİ YAZIYA DÖNÜŞTÜR
     const productListString =
       allProducts
         .map(
@@ -48,52 +43,51 @@ aiRouter.post("/chat", async (req, res) => {
         )
         .join("\n") || "Bu mağazada ürün yok.";
 
-    // 4) Llama3 için system prompt
+    // === PROMPT ===
     const systemPrompt = `
 Sen FlowAI'nın e-ticaret satış asistanısın.
-Müşterinin sorusuna göre aşağıdaki ürünlerden en uygun olanları seçip öner.
 
 Kurallar:
+- Sadece aşağıdaki ürün listesini kullan.
 - Ürün linklerini mutlaka ver.
-- Listede olmayan bir ürünü ASLA uydurma.
-- Fiyat, kategori ve amaç uyumuna göre öneri yap.
-- Uygun ürün yoksa dürüstçe söyle.
+- Liste dışı ürün uydurma.
 
 Mağazanın ürünleri:
 
 ${productListString}
 `;
 
-    // 5) Groq AI request
-    const groqKey = process.env.GROQ_API_KEY;
+    // --- Mesaj formatı ---
+    const groqMessages = [
+      { role: "system", content: systemPrompt },
+      ...messages,
+    ];
 
-    if (!groqKey) {
-      return res.status(500).json({ ok: false, error: "groq_api_key_missing" });
-    }
-
+    // === 🔥 GROQ API İSTEĞİ ===
     const groqResponse = await fetch(
       "https://api.groq.com/openai/v1/chat/completions",
       {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${groqKey}`,
+          Authorization: `Bearer ${process.env.GROQ_API_KEY}`,
         },
         body: JSON.stringify({
-          model: "llama3-8b-8192",
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...messages,
-          ],
-          max_tokens: 500,
+          model: process.env.GROQ_MODEL,
+          messages: groqMessages,
         }),
       }
     );
 
     const data = await groqResponse.json();
+    console.log("🔥 Groq Response:", data);
 
-    const reply =
-      data?.choices?.[0]?.message?.content || "Yanıt oluşturulamadı.";
+    // === 🔥 100% Güvenli cevap çıkarma ===
+    let reply = "Yanıt oluşturulamadı.";
+
+    if (data?.choices?.[0]?.message?.content) {
+      reply = data.choices[0].message.content;
+    }
 
     return res.json({
       ok: true,
@@ -102,9 +96,6 @@ ${productListString}
     });
   } catch (err: any) {
     console.error("AI Chat Error:", err);
-    return res.status(500).json({
-      ok: false,
-      error: err.message,
-    });
+    return res.status(500).json({ ok: false, error: err.message });
   }
 });

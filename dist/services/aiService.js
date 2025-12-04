@@ -7,6 +7,7 @@ exports.generateAIReply = generateAIReply;
 const node_fetch_1 = __importDefault(require("node-fetch"));
 // AI Yanıt Üretici Servis
 async function generateAIReply(shopId, message, history) {
+    var _a, _b, _c;
     try {
         const LM_URL = process.env.LMSTUDIO_API_URL;
         const MODEL = process.env.LM_MODEL;
@@ -40,7 +41,7 @@ async function generateAIReply(shopId, message, history) {
         }
         const data = await response.json();
         console.log("📥 LMStudio RAW RESPONSE:", data);
-        const reply = data?.choices?.[0]?.message?.content || "Bir yanıt üretilemedi.";
+        const reply = ((_c = (_b = (_a = data === null || data === void 0 ? void 0 : data.choices) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.message) === null || _c === void 0 ? void 0 : _c.content) || "Bir yanıt üretilemedi.";
         return reply;
     }
     catch (err) {
