@@ -1,13 +1,26 @@
 import admin from "firebase-admin";
 
-if (!admin.apps.length) {
-  const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT as string);
+let serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT;
 
-  admin.initializeApp({
-    credential: admin.credential.cert(serviceAccount),
-    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
-  });
+if (!serviceAccountJson) {
+  console.error("🔥 FIREBASE_SERVICE_ACCOUNT not found in ENV");
+  throw new Error("FIREBASE_SERVICE_ACCOUNT missing");
 }
 
-export const db = admin.firestore();
+try {
+  serviceAccountJson = JSON.parse(serviceAccountJson);
+} catch (err) {
+  console.error("🔥 ERROR PARSING FIREBASE_SERVICE_ACCOUNT:", err);
+  throw err;
+}
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccountJson),
+  storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
+});
+
+// Bu satır ÖNEMLİ
 export const bucket = admin.storage().bucket();
+
+export const db = admin.firestore();
+export default admin;

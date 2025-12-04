@@ -6,6 +6,9 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
+// ENV mutlaka en üstte
+dotenv_1.default.config();
+// Firebase bundan sonra import edilmeli ❗❗
 require("./config/firebase-admin");
 // ROUTES
 const productImport_1 = __importDefault(require("./routes/productImport"));
@@ -13,7 +16,6 @@ const public_1 = require("./routes/public");
 const aiRouter_1 = require("./routes/aiRouter");
 const qr_1 = require("./routes/qr");
 const qrText_1 = require("./routes/qrText");
-dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
