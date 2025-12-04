@@ -46,15 +46,15 @@ var __generator = (this && this.__generator) || function (thisArg, body) {
         if (op[0] & 5) throw op[1]; return { value: op[0] ? op[1] : void 0, done: true };
     }
 };
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.publicRouter = void 0;
 var express_1 = require("express");
 var firebase_admin_1 = require("../config/firebase-admin");
+var firebase_admin_2 = __importDefault(require("firebase-admin"));
 exports.publicRouter = (0, express_1.Router)();
-/**
- * Public shop info endpoint
- * GET /api/public/shop/:shopId
- */
 exports.publicRouter.get("/shop/:shopId", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
     var shopId, rootCollections, shopRef, shopSnap, shopData, platformsRef, platformsSnap, platforms, _i, _a, doc, platformName, productsSnap, products, err_1;
     return __generator(this, function (_b) {
@@ -64,8 +64,8 @@ exports.publicRouter.get("/shop/:shopId", function (req, res) { return __awaiter
                 shopId = req.params.shopId;
                 console.log("\n========================================");
                 console.log("📌 İstek Alındı → /shop/" + shopId);
-                // 🔥 Bağlı olunan Firebase projesi
-                console.log("🔥 FIREBASE PROJECT:", firebase_admin_1.db.app.options.projectId);
+                // 🔥 DOĞRU DEBUG — Admin SDK üzerinden projectId alma
+                console.log("🔥 FIREBASE PROJECT:", firebase_admin_2.default.app().options.projectId);
                 return [4 /*yield*/, firebase_admin_1.db.listCollections()];
             case 1:
                 rootCollections = _b.sent();

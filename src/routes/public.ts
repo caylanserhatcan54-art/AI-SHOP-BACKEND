@@ -1,12 +1,9 @@
 import { Router } from "express";
 import { db } from "../config/firebase-admin";
+import admin from "firebase-admin";
 
 export const publicRouter = Router();
 
-/**
- * Public shop info endpoint
- * GET /api/public/shop/:shopId
- */
 publicRouter.get("/shop/:shopId", async (req, res) => {
   try {
     const shopId = req.params.shopId;
@@ -14,17 +11,17 @@ publicRouter.get("/shop/:shopId", async (req, res) => {
     console.log("\n========================================");
     console.log("📌 İstek Alındı → /shop/" + shopId);
 
-    // 🔥 Bağlı olunan Firebase projesi
-    console.log("🔥 FIREBASE PROJECT:", db.app.options.projectId);
+    // 🔥 DOĞRU DEBUG — Admin SDK üzerinden projectId alma
+    console.log("🔥 FIREBASE PROJECT:", admin.app().options.projectId);
 
-    // 🔥 Firestore root koleksiyonları göster
+    // 🔥 Firestore root koleksiyonlarını göster
     const rootCollections = await db.listCollections();
     console.log(
       "🔥 ROOT COLLECTIONS:",
       rootCollections.map((c) => c.id)
     );
 
-    // 🔥 Doğru koleksiyon adı → "mağazalar"
+    // mağazalar
     const shopRef = db.collection("mağazalar").doc(shopId);
     const shopSnap = await shopRef.get();
 
@@ -36,7 +33,7 @@ publicRouter.get("/shop/:shopId", async (req, res) => {
 
     const shopData = shopSnap.data() || {};
 
-    // 🔥 platformlar alt koleksiyonu
+    // platformlar
     const platformsRef = shopRef.collection("platformlar");
     const platformsSnap = await platformsRef.get();
 
@@ -45,7 +42,6 @@ publicRouter.get("/shop/:shopId", async (req, res) => {
     for (let doc of platformsSnap.docs) {
       const platformName = doc.id;
 
-      // ürünler alt koleksiyonu
       const productsSnap = await platformsRef
         .doc(platformName)
         .collection("ürünler")
@@ -67,10 +63,7 @@ publicRouter.get("/shop/:shopId", async (req, res) => {
 
     return res.json({
       ok: true,
-      shop: {
-        id: shopId,
-        ...shopData,
-      },
+      shop: { id: shopId, ...shopData },
       platforms,
     });
 
