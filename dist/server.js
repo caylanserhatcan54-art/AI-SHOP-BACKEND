@@ -6,28 +6,33 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
-// 🔥 Firebase Admin Initialize
 require("./config/firebase-admin");
-// ROUTERS
+// ROUTES
 const productImport_1 = __importDefault(require("./routes/productImport"));
 const public_1 = require("./routes/public");
 const aiRouter_1 = require("./routes/aiRouter");
-const qrRouter_1 = require("./routes/qrRouter");
+const qr_1 = require("./routes/qr");
+const qrText_1 = require("./routes/qrText");
+dotenv_1.default.config();
 const app = (0, express_1.default)();
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
 // ROOT
 app.get("/", (req, res) => {
-    res.json({ ok: true, msg: "FlowAI backend aktif" });
+    return res.json({ ok: true, msg: "FlowAI Backend Aktif!" });
 });
 // HEALTH
 app.get("/health", (req, res) => res.json({ ok: true }));
-// ROUTES
+// PRODUCT IMPORT
 app.use("/products", productImport_1.default);
+// PUBLIC ROUTES
 app.use("/api/public", public_1.publicRouter);
+// AI CHAT ROUTE (GROQ)
 app.use("/api/ai", aiRouter_1.aiRouter);
-app.use("/api/qr", qrRouter_1.qrRouter); // 👈 QR sistemi buraya eklendi
+// QR CODE ROUTE
+app.use("/api/qr", qr_1.qrRouter);
+// QR TEXT ROUTE
+app.use("/api/qr-text", qrText_1.qrTextRouter);
 // PORT
-const PORT = process.env.PORT || 10000;
-app.listen(PORT, () => console.log(`🔥 FlowAI Backend PORT : ${PORT}'de çalışıyor`));
+const PORT = process.env.PORT || 4000;
+app.listen(PORT, () => console.log("🔥 FlowAI Backend PORT:", PORT, " üzerinde çalışıyor"));
