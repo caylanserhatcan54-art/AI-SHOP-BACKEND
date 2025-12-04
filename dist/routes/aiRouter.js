@@ -6,10 +6,11 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.aiRouter = void 0;
 const express_1 = __importDefault(require("express"));
 const firestore_1 = require("firebase-admin/firestore");
+const node_fetch_1 = __importDefault(require("node-fetch"));
 exports.aiRouter = express_1.default.Router();
 const db = (0, firestore_1.getFirestore)();
 // ---------------------------------------------
-// OLLAMA İLE AI CHAT
+// GROQ + LLAMA3 AI CHAT
 // ---------------------------------------------
 exports.aiRouter.post("/chat", async (req, res) => {
     try {
@@ -17,65 +18,63 @@ exports.aiRouter.post("/chat", async (req, res) => {
         if (!shopId) {
             return res.status(400).json({ ok: false, error: "shopId_missing" });
         }
-        // 1) Mağaza var mı?
+        // 1) MAĞAZA VAR MI?
         const shopRef = db.collection("magazalar").doc(shopId);
         const shopSnap = await shopRef.get();
         if (!shopSnap.exists) {
             return res.status(404).json({ ok: false, error: "shop_not_found" });
         }
-        // 2) ÜRÜNLERİ TOPLA
+        // 2) TÜM ÜRÜNLERİ ÇEK
         const platformsSnap = await shopRef.collection("platformlar").get();
         const allProducts = [];
-        for (const platformDoc of platformsSnap.docs) {
-            const productsSnap = await platformDoc.ref.collection("urunler").get();
-            productsSnap.forEach((p) => {
-                allProducts.push({
-                    ...p.data(),
-                    platform: platformDoc.id,
-                });
-            });
+        for (const p of platformsSnap.docs) {
+            const productsSnap = await p.ref.collection("urunler").get();
+            productsSnap.forEach((doc) => allProducts.push({
+                ...doc.data(),
+                platform: p.id,
+            }));
         }
-        console.log("🔥 Toplam ürün:", allProducts.length);
-        // 3) AI prompt içinde ürün listesi
+        // 3) ÜRÜNLERİ YAZIYA DÖNÜŞTÜR
         const productListString = allProducts
             .map((p) => `• ${p.title} | ${p.price || ""} | ${p.url} | Platform: ${p.platform}`)
             .join("\n") || "Bu mağazada ürün yok.";
+        // 4) Llama3 için system prompt
         const systemPrompt = `
 Sen FlowAI'nın e-ticaret satış asistanısın.
-Görevin: müşterinin sorularına göre mağazanın ürünlerinden en uygun olanları önermek.
+Müşterinin sorusuna göre aşağıdaki ürünlerden en uygun olanları seçip öner.
 
 Kurallar:
-- Sadece aşağıdaki ürün listesini kullan.
 - Ürün linklerini mutlaka ver.
-- Fiyat ve kategoriye göre filtre yapabilirsin.
-- Listede olmayan ürünü asla uydurma.
-- Uygun ürün yoksa bunu söyle.
+- Listede olmayan bir ürünü ASLA uydurma.
+- Fiyat, kategori ve amaç uyumuna göre öneri yap.
+- Uygun ürün yoksa dürüstçe söyle.
 
 Mağazanın ürünleri:
 
 ${productListString}
 `;
-        // 4) Ollama Formatına Çevir
-        const ollamaMessages = [
-            { role: "system", content: systemPrompt },
-            ...messages.map((m) => ({
-                role: m.role,
-                content: m.content,
-            })),
-        ];
-        // 5) OLLAMA'YA İSTEK
-        const ollamaResponse = await fetch("http://127.0.0.1:11434/v1/chat/completions", {
+        // 5) Groq AI request
+        const groqKey = process.env.GROQ_API_KEY;
+        if (!groqKey) {
+            return res.status(500).json({ ok: false, error: "groq_api_key_missing" });
+        }
+        const groqResponse = await (0, node_fetch_1.default)("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${groqKey}`,
+            },
             body: JSON.stringify({
-                model: "qwen2.5:1.5b",
-                messages: ollamaMessages,
-                stream: false,
+                model: "llama3-8b-8192",
+                messages: [
+                    { role: "system", content: systemPrompt },
+                    ...messages,
+                ],
+                max_tokens: 500,
             }),
         });
-        const data = await ollamaResponse.json();
-        const reply = data?.choices?.[0]?.message?.content ||
-            "Yanıt oluşturulamadı (Ollama'dan boş yanıt geldi).";
+        const data = await groqResponse.json();
+        const reply = data?.choices?.[0]?.message?.content || "Yanıt oluşturulamadı.";
         return res.json({
             ok: true,
             reply,
@@ -84,6 +83,9 @@ ${productListString}
     }
     catch (err) {
         console.error("AI Chat Error:", err);
-        return res.status(500).json({ ok: false, error: err.message });
+        return res.status(500).json({
+            ok: false,
+            error: err.message,
+        });
     }
 });
