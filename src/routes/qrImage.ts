@@ -15,14 +15,14 @@ qrImageRouter.get("/:shopId", async (req, res) => {
 <html>
 <head>
 <style>
-  body { font-family: Arial, sans-serif; text-align:center; padding: 30px; }
-  img { width: 370px; margin-bottom: 25px; }
-  .text { font-size: 22px; line-height: 32px; width: 90%; margin:auto; white-space:pre-line; }
+  body { font-family: Arial, sans-serif; text-align:center; padding: 40px; }
+  img { width: 350px; margin-bottom: 25px; }
+  div { font-size: 22px; line-height: 30px; white-space:pre-line; }
 </style>
 </head>
 <body>
   <img src="${qrBase64}" />
-  <div class="text">
+  <div>
 📎 Ürünler hakkında soru sormak, kombin önerisi almak veya doğru ürünü bulmak için
 QR kodu okutarak veya ürün açıklamasındaki linke tıklayarak yapay zekaya ulaşabilirsiniz.
 
@@ -32,18 +32,22 @@ QR kodu okutarak veya ürün açıklamasındaki linke tıklayarak yapay zekaya u
 </html>`;
 
     const browser = await puppeteer.launch({
-      headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
+      headless: true, // FIX HERE
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+      ],
     });
 
     const page = await browser.newPage();
-    await page.setContent(htmlTemplate);
-    const imageBuffer = await page.screenshot({ type: "png" });
+    await page.setContent(htmlTemplate, { waitUntil: "networkidle0" });
+
+    const buffer = await page.screenshot({ type: "png" });
     await browser.close();
 
-    res.setHeader("Content-Disposition", `attachment; filename=${shopId}_qr.png`);
+    res.setHeader("Content-Disposition", `attachment; filename=${shopId}.png`);
     res.setHeader("Content-Type", "image/png");
-    res.send(imageBuffer);
+    res.send(buffer);
 
   } catch (err: any) {
     console.error("QR IMAGE ERROR:", err);
