@@ -4,7 +4,8 @@
   "main": "dist/server.js",
   "scripts": {
     "build": "tsc",
-    "start": "node dist/server.js"
+    "start": "node dist/server.js",
+    "postinstall": "npx puppeteer browsers install chromium"
   },
   "dependencies": {
     "axios": "^1.13.2",
@@ -19,7 +20,8 @@
     "jsonwebtoken": "^9.0.2",
     "multer": "1.4.5-lts.1",
     "path": "^0.12.7",
-    "puppeteer": "^24.32.0",
+    "puppeteer": "^22.7.1",
+    "puppeteer-core": "^22.7.1",
     "qrcode": "^1.5.4"
   },
   "devDependencies": {

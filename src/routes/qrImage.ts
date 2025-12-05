@@ -1,6 +1,7 @@
 import express from "express";
 import QRCode from "qrcode";
-import puppeteer from "puppeteer";
+import puppeteer from "puppeteer-core";
+import { executablePath } from "puppeteer";
 
 export const qrImageRouter = express.Router();
 
@@ -32,15 +33,13 @@ QR kodu okutarak veya ürün açıklamasındaki linke tıklayarak yapay zekaya u
 </html>`;
 
     const browser = await puppeteer.launch({
-      headless: true, // FIX HERE
-      args: [
-        "--no-sandbox",
-        "--disable-setuid-sandbox",
-      ],
+      headless: true,
+      executablePath: executablePath(),
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
 
     const page = await browser.newPage();
-    await page.setContent(htmlTemplate, { waitUntil: "networkidle0" });
+    await page.setContent(htmlTemplate);
 
     const buffer = await page.screenshot({ type: "png" });
     await browser.close();
@@ -50,7 +49,6 @@ QR kodu okutarak veya ürün açıklamasındaki linke tıklayarak yapay zekaya u
     res.send(buffer);
 
   } catch (err: any) {
-    console.error("QR IMAGE ERROR:", err);
     res.status(500).json({ ok: false, error: err.message });
   }
 });
