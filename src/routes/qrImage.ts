@@ -1,54 +1,50 @@
-import express from "express";
+import { Router } from "express";
 import QRCode from "qrcode";
-import puppeteer from "puppeteer-core";
+import Jimp from "jimp";
 
-export const qrImageRouter = express.Router();
+export const qrImageRouter = Router();
 
 qrImageRouter.get("/:shopId", async (req, res) => {
   try {
-    const shopId = req.params.shopId;
-    const link = `https://flowai.app/${shopId}`;
+    const { shopId } = req.params;
 
-    const qrBase64 = await QRCode.toDataURL(link);
+    const qrUrl = `https://flowai.app/${shopId}`;
+    const qrBuffer = await QRCode.toBuffer(qrUrl, { width: 500 });
 
-    const html = `
-<html>
-<head>
-<style>
-  body { font-family: Arial; text-align:center; padding: 40px; }
-  img { width: 360px; margin-bottom: 30px; }
-  .text { font-size: 24px; line-height: 32px; white-space:pre-line; }
-</style>
-</head>
-<body>
-  <img src="${qrBase64}" />
-  <div class="text">
-📎 Ürünler hakkında soru sormak, kombin önerisi almak veya doğru ürünü bulmak için
-QR kodu okutarak veya ürün açıklamasındaki linke tıklayarak yapay zekaya ulaşabilirsiniz.
+    const qrImage = await Jimp.read(qrBuffer);
 
-👉 ${link}
-  </div>
-</body>
-</html>`;
+    const width = qrImage.bitmap.width;
+    const height = qrImage.bitmap.height + 200;
 
-    // 🔥 Render Chromium Path
-    const browser = await puppeteer.launch({
-      headless: true,
-      executablePath: "/usr/bin/chromium-browser",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
+    const finalImage = new Jimp(width, height, "#FFFFFF");
 
-    const page = await browser.newPage();
-    await page.setContent(html);
-    const buffer = await page.screenshot({ type: "png" });
-    await browser.close();
+    finalImage.composite(qrImage, 0, 0);
 
-    res.setHeader("Content-Disposition", `attachment; filename=${shopId}.png`);
+    const text = `📎 Ürünler hakkında soru sorabilir,
+kombin önerisi alabilir,
+ve mağaza ürünleri için destek alabilirsiniz.
+
+👉 Açıklamadaki linke tıklayın`;
+
+    const font = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK);
+
+    finalImage.print(
+      font,
+      10,
+      qrImage.bitmap.height + 10,
+      {
+        text,
+        alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+        alignmentY: Jimp.VERTICAL_ALIGN_TOP,
+      },
+      width - 20
+    );
+
     res.setHeader("Content-Type", "image/png");
+    res.send(await finalImage.getBufferAsync(Jimp.MIME_PNG));
 
-    res.send(buffer);
-
-  } catch (err: any) {
-    res.status(500).json({ ok: false, error: err.message });
+  } catch (err) {
+    console.error(err);
+    res.status(400).json({ ok: false, error: err });
   }
 });
