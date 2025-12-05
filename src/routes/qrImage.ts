@@ -3,79 +3,61 @@ import QRCode from "qrcode";
 import Jimp from "jimp";
 
 export const qrImageRouter = express.Router();
+const J: any = Jimp;
+
+// Türkçe ve emoji içeren yazıyı resim olarak koyacağız
+const SAFE_TEXT_IMAGE =
+  "https://i.ibb.co/51mVsCt/qr-text-v2.png"; // BURASI PNG, text embedd edilmiş
 
 /**
- * Bu fontlar Jimp formatına uygun (fnt + png)
+ * GET /api/qr-image/:shopId
  */
-const FONT_FNT_URL =
-  "https://raw.githubusercontent.com/caylanserhatcan54-art/public-assets/main/font/Roboto-64.fnt";
-const FONT_PNG_URL =
-  "https://raw.githubusercontent.com/caylanserhatcan54-art/public-assets/main/font/Roboto-64.png";
-
 qrImageRouter.get("/:shopId", async (req, res) => {
   try {
     const { shopId } = req.params;
-    const width = 1200;
-    const height = 1600;
-
-    const base = await Jimp.create(width, height, "#FFFFFF");
 
     const targetUrl = `https://flowai.app/${shopId}`;
 
-    // QR buffer oluştur
-    const qrBuffer = await QRCode.toBuffer(targetUrl, { width: 600 });
-    const qrImg = await Jimp.read(qrBuffer);
+    const width = 1200;
+    const height = 1500;
 
-    // QR gölge arkası
-    const shadow = await Jimp.create(620, 620, "#00000030");
+    // beyaz arka plan
+    const base = new J(width, height, 0xffffffff);
 
-    const qrX = (width - 600) / 2;
-    const qrY = 140;
+    // QR üret
+    const qrPngBuffer = await QRCode.toBuffer(targetUrl, {
+      width: 500,
+      errorCorrectionLevel: "H",
+    });
+    const qrImg = await J.read(qrPngBuffer);
 
-    base.composite(shadow, qrX - 10, qrY + 10);
+    const qrX = (width - 500) / 2;
+    const qrY = 100;
+
     base.composite(qrImg, qrX, qrY);
 
-    // FONT LOAD → artık yeni format
-    const font = await Jimp.loadFont(FONT_FNT_URL);
+    // Text placeholder resmi (Türkçe embed edilmiş hali)
+    const txt = await J.read(SAFE_TEXT_IMAGE);
+    txt.resize(1000, J.AUTO);
 
-    const lines = [
-      "Ürün hakkında soru sormak, kombin önerisi almak",
-      "veya doğru ürünü bulmak için",
-      "QR kodunu okutun veya ürün açıklamasındaki linke tıklayın.",
-      "",
-      "Akıllı alışveriş desteği şimdi hazır!"
-    ];
+    const textX = (width - 1000) / 2;
+    const textY = qrY + 520;
 
-    let y = qrY + 600 + 80;
+    base.composite(txt, textX, textY);
 
-    for (const line of lines) {
-      base.print(
-        font,
-        0,
-        y,
-        {
-          text: line,
-          alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER
-        },
-        width,
-        80
-      );
-      y += 90;
-    }
-
-    const result = await base.getBufferAsync(Jimp.MIME_PNG);
+    const outBuffer = await base.getBufferAsync(J.MIME_PNG);
 
     res.setHeader("Content-Type", "image/png");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${shopId}-qr.png"`
+      `attachment; filename="qr-${shopId}.png"`
     );
-
-    return res.send(result);
+    return res.send(outBuffer);
   } catch (err: any) {
+    console.log("QR ERROR:", err);
     return res.status(500).json({
       ok: false,
-      error: err.message,
+      error: err?.message || "image error",
     });
   }
 });
