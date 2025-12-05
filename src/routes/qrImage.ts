@@ -3,19 +3,15 @@ import QRCode from "qrcode";
 import Jimp from "jimp";
 
 export const qrImageRouter = express.Router();
-const J: any = Jimp;
 
-// UTF-8 destekli fontlar
-const FONT64 = "https://raw.githubusercontent.com/ademilter/jimp-fonts/master/fonts/roboto/Roboto-Regular-64.fnt";
-const FONT64_PNG = "https://raw.githubusercontent.com/ademilter/jimp-fonts/master/fonts/roboto/Roboto-Regular-64.png";
+const FONT_URL =
+  "https://raw.githubusercontent.com/caylanserhatcan54-art/public-assets/main/font/Roboto-64.fnt";
+const FONT_PNG =
+  "https://raw.githubusercontent.com/caylanserhatcan54-art/public-assets/main/font/Roboto-64.png";
 
-const TEXT_LINES = [
-  "Ürün hakkında soru sormak, doğru ürünü bulmak veya",
-  "kombin önerisi almak için QR kodunu okutun.",
-  "",
-  "Akıllı alışveriş desteği hemen hazır!"
-];
-
+/**
+ * GET /api/qr-image/:shopId
+ */
 qrImageRouter.get("/:shopId", async (req, res) => {
   try {
     const { shopId } = req.params;
@@ -24,59 +20,65 @@ qrImageRouter.get("/:shopId", async (req, res) => {
     const width = 1200;
     const height = 1600;
 
-    const image = new J(width, height, 0xffffffff);
+    const base = new Jimp(width, height, "#FFFFFF");
 
-    const qrBuffer = await QRCode.toBuffer(targetUrl, {
-      width: 500,
-      margin: 0
-    });
+    // QR üretme
+    const qrBuffer = await QRCode.toBuffer(targetUrl, { margin: 0 });
+    const qrJimp = await Jimp.read(qrBuffer);
+    qrJimp.resize(550, 550);
 
-    const qr = await J.read(qrBuffer);
-    qr.resize(500, 500);
+    const qrX = (width - 550) / 2;
+    const qrY = 150;
 
-    const qrX = (width - 500) / 2;
-    const qrY = 100;
+    // gölge arkası
+    const blurBg = new Jimp(580, 580, "#00000030");
+    base.composite(blurBg, qrX - 15, qrY + 15);
 
-    const shadow = new J(520, 520, "#00000022");
-    image.composite(shadow, qrX - 10, qrY + 10);
+    base.composite(qrJimp, qrX, qrY);
 
-    image.composite(qr, qrX, qrY);
+    // FONT → PNG ile eşle
+    const font = await Jimp.loadFont(FONT_URL);
 
-    // HARİCİ FONT YÜKLE (UTF-8 destekli)
-    const font = await J.loadFont(FONT64);
+    const textLines = [
+      "Ürün hakkında soru sormak,",
+      "kombin önerisi almak veya doğru ürünü bulmak için",
+      "QR kodunu okutun ya da ürün açıklamasındaki linke tıklayın.",
+      "",
+      "Akıllı alışveriş desteği hemen hazır!"
+    ];
 
-    let textY = qrY + 580;
+    let startY = qrY + 600;
 
-    TEXT_LINES.forEach((line: string) => {
-      image.print(
+    for (let line of textLines) {
+      base.print(
         font,
         0,
-        textY,
+        startY,
         {
           text: line,
-          alignmentX: J.HORIZONTAL_ALIGN_CENTER
+          alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER
         },
         width,
         80
       );
 
-      textY += 80;
-    });
+      startY += 80;
+    }
 
-    const buffer = await image.getBufferAsync(J.MIME_PNG);
+    const pngBuffer = await base.getBufferAsync(Jimp.MIME_PNG);
 
     res.setHeader("Content-Type", "image/png");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="${shopId}-qr-v2.png"`
+      `attachment; filename="${shopId}-qr.png"`
     );
 
-    res.send(buffer);
-
+    return res.send(pngBuffer);
   } catch (err: any) {
-    console.log("QR ERROR", err);
-    res.status(500).json({ ok: false, error: err.message });
+    console.log("V2 ERROR:", err);
+    return res.status(500).json({
+      ok: false,
+      error: err.message,
+    });
   }
 });
-
-export default qrImageRouter;
