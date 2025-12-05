@@ -3,66 +3,89 @@ import QRCode from "qrcode";
 import Jimp from "jimp";
 
 export const qrImageRouter = express.Router();
-const J: any = Jimp;
 
-// Yeni text görseli
-// — Arka plan beyaz
-// — Yazılar siyah
-// — UTF-8 destekli
-const TEXT_IMAGE =
-  "https://i.ibb.co/hV6Yk5V/text-v3.png";
+const WHITE = 0xffffffff;
+const BLACK = 0x000000ff;
 
+/**
+ * GET /api/qr-image/:shopId
+ */
 qrImageRouter.get("/:shopId", async (req, res) => {
   try {
     const { shopId } = req.params;
 
     const targetUrl = `https://flowai.app/${shopId}`;
 
+    const textLines = [
+      "Ürün hakkında soru sormak, doğru ürünü bulmak veya",
+      "kombin önerileri almak için QR kodunu okutup,",
+      "ürün açıklamasındaki linke tıklayabilirsiniz.",
+      "",
+      "Akıllı alışveriş desteği şimdi hazır!"
+    ];
+
+    // Çalışma alanı
     const width = 1200;
     const height = 1600;
 
-    // Arkaplan beyaz
-    const baseImage = new J(width, height, 0xffffffff);
+    const image = new Jimp(width, height, WHITE);
 
-    // QR üret (eski 500 yerine 700 px yaptık)
-    const qrBuffer = await QRCode.toBuffer(targetUrl, {
-      width: 700,
-      margin: 1,
-      errorCorrectionLevel: "H",
-    });
+    // QR üret
+    const qrBuffer = await QRCode.toBuffer(targetUrl, { width: 650, margin: 1 });
+    const qr = await Jimp.read(qrBuffer);
 
-    const qrImage = await J.read(qrBuffer);
+    // QR yerleşimi
+    const qrX = (width - 650) / 2;
+    const qrY = 120;
 
-    const qrSize = 700;
-    const qrX = (width - qrSize) / 2;
-    const qrY = 100;
+    // *** GÖLGE ARKA PLAN ***
+    const shadow = new Jimp(650, 650, 0xccccccff);
+    image.composite(shadow, qrX + 15, qrY + 15);
 
-    baseImage.composite(qrImage, qrX, qrY);
+    // QR'yi baseline üstüne bindir
+    image.composite(qr, qrX, qrY);
 
-    // Text PNG’yi oku
-    const textImage = await J.read(TEXT_IMAGE);
+    // Yazı fontları
+    const fontLarge = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK);
 
-    textImage.resize(1000, J.AUTO);
+    // Yazı başlama noktası
+    let textY = qrY + 650 + 80;
 
-    const txtX = (width - 1000) / 2;
-    const txtY = qrY + qrSize + 70;
+    for (const line of textLines) {
+      image.print(
+        fontLarge,
+        0,
+        textY,
+        {
+          text: line,
+          alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
+          alignmentY: Jimp.VERTICAL_ALIGN_TOP,
+        },
+        width,
+        50
+      );
 
-    baseImage.composite(textImage, txtX, txtY);
+      textY += 60;
+    }
 
-    const output = await baseImage.getBufferAsync(J.MIME_PNG);
+    // PNG çıkar
+    const buffer = await image.getBufferAsync(Jimp.MIME_PNG);
 
     res.setHeader("Content-Type", "image/png");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="qr-${shopId}.png"`
+      `attachment; filename="flowai-${shopId}-qr.png"`
     );
 
-    return res.send(output);
+    res.send(buffer);
+
   } catch (err: any) {
     console.log("QR ERROR:", err);
-    return res.status(500).json({
+    res.status(500).json({
       ok: false,
-      error: err.message || "unknown error",
+      error: err.message,
     });
   }
 });
+
+export default qrImageRouter;
