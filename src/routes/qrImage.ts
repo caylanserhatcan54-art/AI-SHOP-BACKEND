@@ -5,17 +5,17 @@ import Jimp from "jimp";
 export const qrImageRouter = express.Router();
 const J: any = Jimp;
 
-// Version 2 modern açıklama
+// UTF-8 destekli fontlar
+const FONT64 = "https://raw.githubusercontent.com/ademilter/jimp-fonts/master/fonts/roboto/Roboto-Regular-64.fnt";
+const FONT64_PNG = "https://raw.githubusercontent.com/ademilter/jimp-fonts/master/fonts/roboto/Roboto-Regular-64.png";
+
 const TEXT_LINES = [
   "Ürün hakkında soru sormak, doğru ürünü bulmak veya",
-  "kombin önerileri almak için QR kodunu okutup,",
-  "ürün açıklamasındaki linke tıklayabilirsiniz.",
+  "kombin önerisi almak için QR kodunu okutun.",
   "",
-  "Akıllı alışveriş desteği şimdi hazır!"
+  "Akıllı alışveriş desteği hemen hazır!"
 ];
 
-
-/** --- Version 2 --- */
 qrImageRouter.get("/:shopId", async (req, res) => {
   try {
     const { shopId } = req.params;
@@ -24,13 +24,11 @@ qrImageRouter.get("/:shopId", async (req, res) => {
     const width = 1200;
     const height = 1600;
 
-    // Beyaz arka plan
     const image = new J(width, height, 0xffffffff);
 
-    // QR oluştur
     const qrBuffer = await QRCode.toBuffer(targetUrl, {
       width: 500,
-      margin: 0,
+      margin: 0
     });
 
     const qr = await J.read(qrBuffer);
@@ -39,32 +37,30 @@ qrImageRouter.get("/:shopId", async (req, res) => {
     const qrX = (width - 500) / 2;
     const qrY = 100;
 
-    // QR gölge efekti
-    const shadow = new J(520, 520, 0x00000022); // gri transparan
+    const shadow = new J(520, 520, "#00000022");
     image.composite(shadow, qrX - 10, qrY + 10);
 
     image.composite(qr, qrX, qrY);
 
-    // Font yükle
-    const font = await J.loadFont(J.FONT_SANS_32_BLACK);
+    // HARİCİ FONT YÜKLE (UTF-8 destekli)
+    const font = await J.loadFont(FONT64);
 
-    // Yazı konumu
-    let textStartY = qrY + 550 + 40;
+    let textY = qrY + 580;
 
     TEXT_LINES.forEach((line: string) => {
       image.print(
         font,
         0,
-        textStartY,
+        textY,
         {
           text: line,
           alignmentX: J.HORIZONTAL_ALIGN_CENTER
         },
         width,
-        60
+        80
       );
 
-      textStartY += 60;
+      textY += 80;
     });
 
     const buffer = await image.getBufferAsync(J.MIME_PNG);
@@ -75,13 +71,11 @@ qrImageRouter.get("/:shopId", async (req, res) => {
       `attachment; filename="${shopId}-qr-v2.png"`
     );
 
-    return res.send(buffer);
+    res.send(buffer);
+
   } catch (err: any) {
     console.log("QR ERROR", err);
-    return res.status(500).json({
-      ok: false,
-      error: err.message,
-    });
+    res.status(500).json({ ok: false, error: err.message });
   }
 });
 
