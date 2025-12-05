@@ -17,11 +17,11 @@ qrImageRouter.get("/:shopId", async (req, res) => {
     const targetUrl = `https://flowai.app/${shopId}`;
 
     const textLines = [
-      "Ürünlerle ilgili soru sormak, istediğiniz ürünü bulmak veya",
+      "Ürünlerle ilgili soru sormak, istediginiz ürünü bulmak veya",
       "kombin önerileri almak için QR kodunu okutabilir yada,",
-      "ürün bilgilerindeki linkten ulaşabilirsiniz.",
+      "ürün bilgilerindeki linkten ulasabilirsiniz.",
       "",
-      "Yapay Zeka destekli alşveriş şimdi hizmetinizde!"
+      "Yapay Zeka destekli alsveris hizmetinizde!"
     ];
 
     // Çalışma alanı
