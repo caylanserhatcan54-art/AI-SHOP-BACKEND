@@ -5,108 +5,84 @@ import Jimp from "jimp";
 export const qrImageRouter = express.Router();
 const J: any = Jimp;
 
-// ✨ Font olarak UTF-8 destekli external font kullanıyoruz
-const FONT_URL =
-  "https://raw.githubusercontent.com/Stichoza/google-fonts-ttf/master/fonts/roboto/Roboto-Regular.ttf";
+// Version 2 modern açıklama
+const TEXT_LINES = [
+  "Ürün hakkında soru sormak, doğru ürünü bulmak veya",
+  "kombin önerileri almak için QR kodunu okutup,",
+  "ürün açıklamasındaki linke tıklayabilirsiniz.",
+  "",
+  "Akıllı alışveriş desteği şimdi hazır!"
+];
 
-/**
- * GET /api/qr-image/:shopId
- * Tek PNG içinde QR + düzgün ortalanmış açıklama
- */
+
+/** --- Version 2 --- */
 qrImageRouter.get("/:shopId", async (req, res) => {
   try {
     const { shopId } = req.params;
-
     const targetUrl = `https://flowai.app/${shopId}`;
-
-    const infoText = `
-📎 Ürünler hakkında soru sormak, kombin önerisi almak veya doğru ürünü bulmak için
-QR kodu okutarak veya ürün açıklamasındaki linke tıklayarak yapay zekaya ulaşabilirsiniz.
-
-💬 Size özel öneriler ve ürün desteği hazır!
-👉 ${targetUrl}
-    `.trim();
 
     const width = 1200;
     const height = 1600;
 
-    // Arka plan
+    // Beyaz arka plan
     const image = new J(width, height, 0xffffffff);
 
     // QR oluştur
     const qrBuffer = await QRCode.toBuffer(targetUrl, {
       width: 500,
-      margin: 1,
+      margin: 0,
     });
 
     const qr = await J.read(qrBuffer);
-
     qr.resize(500, 500);
 
     const qrX = (width - 500) / 2;
-    const qrY = 80;
+    const qrY = 100;
+
+    // QR gölge efekti
+    const shadow = new J(520, 520, 0x00000022); // gri transparan
+    image.composite(shadow, qrX - 10, qrY + 10);
 
     image.composite(qr, qrX, qrY);
 
-    // FONT YÜKLE (UTF8 destekli)
+    // Font yükle
     const font = await J.loadFont(J.FONT_SANS_32_BLACK);
 
-    // Biz text'i manuel bölüyoruz → sağdan soldan taşma yok
-    const wrapped = wrapText(infoText, 40);
+    // Yazı konumu
+    let textStartY = qrY + 550 + 40;
 
-    const textY = qrY + 500 + 80;
+    TEXT_LINES.forEach((line: string) => {
+      image.print(
+        font,
+        0,
+        textStartY,
+        {
+          text: line,
+          alignmentX: J.HORIZONTAL_ALIGN_CENTER
+        },
+        width,
+        60
+      );
 
-    image.print(
-      font,
-      40,
-      textY,
-      {
-        text: wrapped,
-        alignmentX: J.HORIZONTAL_ALIGN_CENTER,
-        alignmentY: J.VERTICAL_ALIGN_TOP,
-      },
-      width - 80,
-      height - textY - 40
-    );
+      textStartY += 60;
+    });
 
     const buffer = await image.getBufferAsync(J.MIME_PNG);
 
     res.setHeader("Content-Type", "image/png");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="flowai-${shopId}-qr.png"`
+      `attachment; filename="${shopId}-qr-v2.png"`
     );
+
     return res.send(buffer);
   } catch (err: any) {
-    console.log(err);
+    console.log("QR ERROR", err);
     return res.status(500).json({
       ok: false,
       error: err.message,
     });
   }
 });
-
-/**
- * Basit satır kırma fonksiyonu
- */
-function wrapText(text: string, maxLength: number) {
-  const lines = [];
-  const words = text.split(" ");
-
-  let line = "";
-
-  for (const word of words) {
-    if ((line + word).length > maxLength) {
-      lines.push(line);
-      line = word;
-    } else {
-      line += " " + word;
-    }
-  }
-
-  lines.push(line);
-
-  return lines.join("\n");
-}
 
 export default qrImageRouter;
