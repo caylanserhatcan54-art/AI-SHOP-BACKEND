@@ -4,56 +4,55 @@ import Jimp from "jimp";
 
 export const qrImageRouter = express.Router();
 
-const FONT_URL =
+/**
+ * Bu fontlar Jimp formatına uygun (fnt + png)
+ */
+const FONT_FNT_URL =
   "https://raw.githubusercontent.com/caylanserhatcan54-art/public-assets/main/font/Roboto-64.fnt";
-const FONT_PNG =
+const FONT_PNG_URL =
   "https://raw.githubusercontent.com/caylanserhatcan54-art/public-assets/main/font/Roboto-64.png";
 
-/**
- * GET /api/qr-image/:shopId
- */
 qrImageRouter.get("/:shopId", async (req, res) => {
   try {
     const { shopId } = req.params;
-    const targetUrl = `https://flowai.app/${shopId}`;
-
     const width = 1200;
     const height = 1600;
 
-    const base = new Jimp(width, height, "#FFFFFF");
+    const base = await Jimp.create(width, height, "#FFFFFF");
 
-    // QR üretme
-    const qrBuffer = await QRCode.toBuffer(targetUrl, { margin: 0 });
-    const qrJimp = await Jimp.read(qrBuffer);
-    qrJimp.resize(550, 550);
+    const targetUrl = `https://flowai.app/${shopId}`;
 
-    const qrX = (width - 550) / 2;
-    const qrY = 150;
+    // QR buffer oluştur
+    const qrBuffer = await QRCode.toBuffer(targetUrl, { width: 600 });
+    const qrImg = await Jimp.read(qrBuffer);
 
-    // gölge arkası
-    const blurBg = new Jimp(580, 580, "#00000030");
-    base.composite(blurBg, qrX - 15, qrY + 15);
+    // QR gölge arkası
+    const shadow = await Jimp.create(620, 620, "#00000030");
 
-    base.composite(qrJimp, qrX, qrY);
+    const qrX = (width - 600) / 2;
+    const qrY = 140;
 
-    // FONT → PNG ile eşle
-    const font = await Jimp.loadFont(FONT_URL);
+    base.composite(shadow, qrX - 10, qrY + 10);
+    base.composite(qrImg, qrX, qrY);
 
-    const textLines = [
-      "Ürün hakkında soru sormak,",
-      "kombin önerisi almak veya doğru ürünü bulmak için",
-      "QR kodunu okutun ya da ürün açıklamasındaki linke tıklayın.",
+    // FONT LOAD → artık yeni format
+    const font = await Jimp.loadFont(FONT_FNT_URL);
+
+    const lines = [
+      "Ürün hakkında soru sormak, kombin önerisi almak",
+      "veya doğru ürünü bulmak için",
+      "QR kodunu okutun veya ürün açıklamasındaki linke tıklayın.",
       "",
-      "Akıllı alışveriş desteği hemen hazır!"
+      "Akıllı alışveriş desteği şimdi hazır!"
     ];
 
-    let startY = qrY + 600;
+    let y = qrY + 600 + 80;
 
-    for (let line of textLines) {
+    for (const line of lines) {
       base.print(
         font,
         0,
-        startY,
+        y,
         {
           text: line,
           alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER
@@ -61,11 +60,10 @@ qrImageRouter.get("/:shopId", async (req, res) => {
         width,
         80
       );
-
-      startY += 80;
+      y += 90;
     }
 
-    const pngBuffer = await base.getBufferAsync(Jimp.MIME_PNG);
+    const result = await base.getBufferAsync(Jimp.MIME_PNG);
 
     res.setHeader("Content-Type", "image/png");
     res.setHeader(
@@ -73,9 +71,8 @@ qrImageRouter.get("/:shopId", async (req, res) => {
       `attachment; filename="${shopId}-qr.png"`
     );
 
-    return res.send(pngBuffer);
+    return res.send(result);
   } catch (err: any) {
-    console.log("V2 ERROR:", err);
     return res.status(500).json({
       ok: false,
       error: err.message,
