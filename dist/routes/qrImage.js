@@ -4,36 +4,68 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.qrImageRouter = void 0;
-const express_1 = require("express");
+// src/routes/qrImage.ts
+const express_1 = __importDefault(require("express"));
 const qrcode_1 = __importDefault(require("qrcode"));
 const jimp_1 = __importDefault(require("jimp"));
-exports.qrImageRouter = (0, express_1.Router)();
+exports.qrImageRouter = express_1.default.Router();
+// Jimp'i "any" gibi kullanıp TS hatalarını susturuyoruz
+const J = jimp_1.default;
+/**
+ * QR + altında açıklama yazısı ile tek PNG indirir
+ * Örnek: GET /api/qr-image/serhat
+ */
 exports.qrImageRouter.get("/:shopId", async (req, res) => {
     try {
         const { shopId } = req.params;
-        const qrUrl = `https://flowai.app/${shopId}`;
-        const qrBuffer = await qrcode_1.default.toBuffer(qrUrl, { width: 500 });
-        const qrImage = await jimp_1.default.read(qrBuffer);
-        const width = qrImage.bitmap.width;
-        const height = qrImage.bitmap.height + 200;
-        const finalImage = new jimp_1.default(width, height, "#FFFFFF");
-        finalImage.composite(qrImage, 0, 0);
-        const text = `📎 Ürünler hakkında soru sorabilir,
-kombin önerisi alabilir,
-ve mağaza ürünleri için destek alabilirsiniz.
+        // QR'ın gideceği URL (frontend tarafı)
+        const targetUrl = `https://flowai.app/${shopId}`;
+        // Görsel boyutları
+        const width = 800;
+        const height = 1100;
+        const qrSize = 400;
+        const marginTop = 40;
+        // Açıklama metni (QR altına gelecek)
+        const infoText = `📎 Ürünler hakkında soru sormak, kombin önerisi almak veya doğru ürünü bulmak için
+QR kodu okutarak veya ürün açıklamasındaki linke tıklayarak yapay zekaya ulaşabilirsiniz.
 
-👉 Açıklamadaki linke tıklayın`;
-        const font = await jimp_1.default.loadFont(jimp_1.default.FONT_SANS_32_BLACK);
-        finalImage.print(font, 10, qrImage.bitmap.height + 10, {
-            text,
-            alignmentX: jimp_1.default.HORIZONTAL_ALIGN_CENTER,
-            alignmentY: jimp_1.default.VERTICAL_ALIGN_TOP,
-        }, width - 20);
+💬 Size özel öneriler ve ürün desteği hazır!
+👉 ${targetUrl}`;
+        // 1) QR PNG buffer üret
+        const qrBuffer = await qrcode_1.default.toBuffer(targetUrl, {
+            width: qrSize,
+            margin: 1,
+        });
+        // 2) Boş beyaz zemin oluştur
+        const baseImage = await new J(width, height, 0xffffffff); // beyaz zemin
+        // 3) QR'ı ortala ve ekle
+        const qrImage = await J.read(qrBuffer);
+        const qrX = (width - qrSize) / 2;
+        const qrY = marginTop;
+        qrImage.resize(qrSize, qrSize);
+        baseImage.composite(qrImage, qrX, qrY);
+        // 4) Font yükle ve metni QR'ın altına, ortalı yaz
+        const font = await J.loadFont(J.FONT_SANS_32_BLACK);
+        const textMarginX = 40;
+        const textTopY = qrY + qrSize + 40;
+        const textBoxWidth = width - textMarginX * 2;
+        const textBoxHeight = height - textTopY - 40;
+        baseImage.print(font, textMarginX, textTopY, {
+            text: infoText,
+            alignmentX: J.HORIZONTAL_ALIGN_CENTER,
+            alignmentY: J.VERTICAL_ALIGN_TOP,
+        }, textBoxWidth, textBoxHeight);
+        // 5) PNG buffer olarak cevapla
+        const outBuffer = await baseImage.getBufferAsync(J.MIME_PNG);
         res.setHeader("Content-Type", "image/png");
-        res.send(await finalImage.getBufferAsync(jimp_1.default.MIME_PNG));
+        res.setHeader("Content-Disposition", `attachment; filename="flowai-qr-${shopId}.png"`);
+        return res.send(outBuffer);
     }
     catch (err) {
-        console.error(err);
-        res.status(400).json({ ok: false, error: err });
+        console.error("QR Image Error:", err);
+        return res
+            .status(500)
+            .json({ ok: false, error: (err === null || err === void 0 ? void 0 : err.message) || "qr_image_error" });
     }
 });
+exports.default = exports.qrImageRouter;

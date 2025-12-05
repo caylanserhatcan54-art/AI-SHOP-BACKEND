@@ -1,50 +1,91 @@
-import { Router } from "express";
+// src/routes/qrImage.ts
+import express from "express";
 import QRCode from "qrcode";
 import Jimp from "jimp";
 
-export const qrImageRouter = Router();
+export const qrImageRouter = express.Router();
 
+// Jimp'i "any" gibi kullanıp TS hatalarını susturuyoruz
+const J: any = Jimp;
+
+/**
+ * QR + altında açıklama yazısı ile tek PNG indirir
+ * Örnek: GET /api/qr-image/serhat
+ */
 qrImageRouter.get("/:shopId", async (req, res) => {
   try {
     const { shopId } = req.params;
 
-    const qrUrl = `https://flowai.app/${shopId}`;
-    const qrBuffer = await QRCode.toBuffer(qrUrl, { width: 500 });
+    // QR'ın gideceği URL (frontend tarafı)
+    const targetUrl = `https://flowai.app/${shopId}`;
 
-    const qrImage = await Jimp.read(qrBuffer);
+    // Görsel boyutları
+    const width = 800;
+    const height = 1100;
+    const qrSize = 400;
+    const marginTop = 40;
 
-    const width = qrImage.bitmap.width;
-    const height = qrImage.bitmap.height + 200;
+    // Açıklama metni (QR altına gelecek)
+    const infoText = `📎 Ürünler hakkında soru sormak, kombin önerisi almak veya doğru ürünü bulmak için
+QR kodu okutarak veya ürün açıklamasındaki linke tıklayarak yapay zekaya ulaşabilirsiniz.
 
-    const finalImage = new Jimp(width, height, "#FFFFFF");
+💬 Size özel öneriler ve ürün desteği hazır!
+👉 ${targetUrl}`;
 
-    finalImage.composite(qrImage, 0, 0);
+    // 1) QR PNG buffer üret
+    const qrBuffer = await QRCode.toBuffer(targetUrl, {
+      width: qrSize,
+      margin: 1,
+    });
 
-    const text = `📎 Ürünler hakkında soru sorabilir,
-kombin önerisi alabilir,
-ve mağaza ürünleri için destek alabilirsiniz.
+    // 2) Boş beyaz zemin oluştur
+    const baseImage = await new J(width, height, 0xffffffff); // beyaz zemin
 
-👉 Açıklamadaki linke tıklayın`;
+    // 3) QR'ı ortala ve ekle
+    const qrImage = await J.read(qrBuffer);
+    const qrX = (width - qrSize) / 2;
+    const qrY = marginTop;
 
-    const font = await Jimp.loadFont(Jimp.FONT_SANS_32_BLACK);
+    qrImage.resize(qrSize, qrSize);
+    baseImage.composite(qrImage, qrX, qrY);
 
-    finalImage.print(
+    // 4) Font yükle ve metni QR'ın altına, ortalı yaz
+    const font = await J.loadFont(J.FONT_SANS_32_BLACK);
+
+    const textMarginX = 40;
+    const textTopY = qrY + qrSize + 40;
+    const textBoxWidth = width - textMarginX * 2;
+    const textBoxHeight = height - textTopY - 40;
+
+    baseImage.print(
       font,
-      10,
-      qrImage.bitmap.height + 10,
+      textMarginX,
+      textTopY,
       {
-        text,
-        alignmentX: Jimp.HORIZONTAL_ALIGN_CENTER,
-        alignmentY: Jimp.VERTICAL_ALIGN_TOP,
+        text: infoText,
+        alignmentX: J.HORIZONTAL_ALIGN_CENTER,
+        alignmentY: J.VERTICAL_ALIGN_TOP,
       },
-      width - 20
+      textBoxWidth,
+      textBoxHeight
     );
 
-    res.setHeader("Content-Type", "image/png");
-    res.send(await finalImage.getBufferAsync(Jimp.MIME_PNG));
+    // 5) PNG buffer olarak cevapla
+    const outBuffer = await baseImage.getBufferAsync(J.MIME_PNG);
 
-  } catch (err) {
-    console.error(err);
-    res.status(400).json({ ok: false, error: err });
+    res.setHeader("Content-Type", "image/png");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename="flowai-qr-${shopId}.png"`
+    );
+
+    return res.send(outBuffer);
+  } catch (err: any) {
+    console.error("QR Image Error:", err);
+    return res
+      .status(500)
+      .json({ ok: false, error: err?.message || "qr_image_error" });
   }
 });
+
+export default qrImageRouter;

@@ -1,27 +1,24 @@
+// src/routes/qrText.ts
 import express from "express";
+
 export const qrTextRouter = express.Router();
 
-qrTextRouter.get("/:shopId", async (req, res) => {
+/**
+ * Sadece açıklama metni döner.
+ * Örnek: GET /api/qr-text/serhat
+ */
+qrTextRouter.get("/:shopId", (req, res) => {
   const { shopId } = req.params;
 
-  const baseUrl =
-    process.env.CLIENT_URL || "https://ai-shop-backend-2.onrender.com/chat";
-
-  const link = `${baseUrl}/${shopId}`;
-
-  const text = `
-📎 Ürünler hakkında soru sormak, kombin önerisi almak veya doğru ürünü bulmak için
-QR kodu okutarak ya da ürün açıklamasındaki linke tıklayarak yapay zekaya ulaşabilirsiniz.
+  const infoText = `📎 Ürünler hakkında soru sormak, kombin önerisi almak veya doğru ürünü bulmak için
+QR kodu okutarak veya ürün açıklamasındaki linke tıklayarak yapay zekaya ulaşabilirsiniz.
 
 💬 Size özel öneriler ve ürün desteği hazır!
-👉 ${link}
-  `;
+👉 https://flowai.app/${shopId}
+`;
 
-  res.setHeader("Content-Type", "text/plain");
-  res.setHeader(
-    "Content-Disposition",
-    `attachment; filename="bilgilendirme-${shopId}.txt"`
-  );
-
-  return res.send(text);
+  res.setHeader("Content-Type", "text/plain; charset=utf-8");
+  return res.send(infoText);
 });
+
+export default qrTextRouter;
