@@ -1,96 +1,73 @@
 import express from "express";
+import admin from "../config/firebase-admin";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import admin from "../config/firebase-admin";
 
 export const authShopRouter = express.Router();
-const db = admin.firestore();
 
-/**
- * REGISTER SHOP
- */
 authShopRouter.post("/register_shop", async (req, res) => {
   try {
-    const { email, password, shopName } = req.body;
+    const { shopName, email, password } = req.body;
 
-    if (!email || !password || !shopName) {
-      return res.status(400).json({ ok: false, error: "Eksik veri" });
+    if (!shopName || !email || !password) {
+      return res.status(400).json({ ok: false, error: "Eksik bilgi gönderildi." });
     }
 
-    const exists = await db
-      .collection("shops")
-      .where("email", "==", email)
-      .get();
+    const db = admin.firestore();
 
-    if (!exists.empty) {
-      return res.status(400).json({ ok: false, error: "Bu email ile kayıt var" });
+    const shopRef = db.collection("shops").doc(email);
+    const shopSnap = await shopRef.get();
+
+    if (shopSnap.exists) {
+      return res.status(400).json({ ok: false, error: "Bu e-mail ile mağaza zaten kayıtlı." });
     }
 
-    const hashedPass = await bcrypt.hash(password, 10);
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-    const newShop = {
-      email,
+    await shopRef.set({
       shopName,
-      password: hashedPass,
-      active: true,
-      createdAt: Date.now(),
-    };
-
-    const docRef = await db.collection("shops").add(newShop);
-
-    return res.json({
-      ok: true,
-      shopId: docRef.id,
+      email,
+      password: hashedPassword,
+      createdAt: new Date().toISOString(),
     });
-  } catch (e: any) {
-    console.log(e);
-    return res.status(500).json({ ok: false, error: e.message });
+
+    return res.json({ ok: true, message: "Mağaza kaydı başarılı" });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err.message });
   }
 });
 
-/**
- * LOGIN SHOP
- */
 authShopRouter.post("/login_shop", async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    const snapshot = await db
-      .collection("shops")
-      .where("email", "==", email)
-      .get();
+    if (!email || !password)
+      return res.status(400).json({ ok: false, error: "Eksik bilgi gönderildi." });
 
-    if (snapshot.empty) {
-      return res.status(400).json({ ok: false, error: "Mağaza bulunamadı" });
+    const db = admin.firestore();
+    const shopRef = db.collection("shops").doc(email);
+    const shopSnap = await shopRef.get();
+
+    if (!shopSnap.exists) {
+      return res.status(400).json({ ok: false, error: "Mağaza bulunamadı." });
     }
 
-    const shop = { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+    const shopData = shopSnap.data();
+    const isMatch = await bcrypt.compare(password, shopData.password);
 
-    const isPasswordCorrect = await bcrypt.compare(password, shop.password);
-
-    if (!isPasswordCorrect) {
+    if (!isMatch) {
       return res.status(400).json({ ok: false, error: "Şifre hatalı" });
     }
 
     const token = jwt.sign(
-      { shopId: shop.id },
-      process.env.JWT_SECRET || "secret123",
+      { email, shopName: shopData.shopName },
+      process.env.JWT_SECRET || "flowai-secret",
       { expiresIn: "7d" }
     );
 
-    return res.json({
-      ok: true,
-      token,
-      shop: {
-        id: shop.id,
-        email: shop.email,
-        shopName: shop.shopName,
-        active: shop.active,
-      },
-    });
-  } catch (e: any) {
-    console.log(e);
-    return res.status(500).json({ ok: false, error: e.message });
+    return res.json({ ok: true, token });
+  } catch (err: any) {
+    return res.status(500).json({ ok: false, error: err.message });
   }
 });
 
