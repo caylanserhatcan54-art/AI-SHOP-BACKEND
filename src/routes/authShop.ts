@@ -1,7 +1,7 @@
 import express from "express";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { admin } from "../config/firebase-admin";
+import admin from "../config/firebase-admin";
 
 export const authShopRouter = express.Router();
 const db = admin.firestore();
