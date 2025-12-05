@@ -12,7 +12,7 @@ import "./config/firebase-admin";
 import productImportRouter from "./routes/productImport";
 import { publicRouter } from "./routes/public";
 import { aiRouter } from "./routes/aiRouter";
-import { qrRouter } from "./routes/qr";
+import { qrDownloadRouter } from "./routes/qrDownload";
 import { qrTextRouter } from "./routes/qrText";
 
 const app = express();
@@ -37,7 +37,7 @@ app.use("/api/public", publicRouter);
 app.use("/api/ai", aiRouter);
 
 // QR CODE ROUTE
-app.use("/api/qr", qrRouter);
+app.use("/api/qr-download", qrDownloadRouter);
 
 // QR TEXT ROUTE
 app.use("/api/qr-text", qrTextRouter);
