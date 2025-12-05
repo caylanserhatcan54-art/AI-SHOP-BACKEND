@@ -1,91 +1,112 @@
-// src/routes/qrImage.ts
 import express from "express";
 import QRCode from "qrcode";
 import Jimp from "jimp";
 
 export const qrImageRouter = express.Router();
-
-// Jimp'i "any" gibi kullanıp TS hatalarını susturuyoruz
 const J: any = Jimp;
 
+// ✨ Font olarak UTF-8 destekli external font kullanıyoruz
+const FONT_URL =
+  "https://raw.githubusercontent.com/Stichoza/google-fonts-ttf/master/fonts/roboto/Roboto-Regular.ttf";
+
 /**
- * QR + altında açıklama yazısı ile tek PNG indirir
- * Örnek: GET /api/qr-image/serhat
+ * GET /api/qr-image/:shopId
+ * Tek PNG içinde QR + düzgün ortalanmış açıklama
  */
 qrImageRouter.get("/:shopId", async (req, res) => {
   try {
     const { shopId } = req.params;
 
-    // QR'ın gideceği URL (frontend tarafı)
     const targetUrl = `https://flowai.app/${shopId}`;
 
-    // Görsel boyutları
-    const width = 800;
-    const height = 1100;
-    const qrSize = 400;
-    const marginTop = 40;
-
-    // Açıklama metni (QR altına gelecek)
-    const infoText = `📎 Ürünler hakkında soru sormak, kombin önerisi almak veya doğru ürünü bulmak için
+    const infoText = `
+📎 Ürünler hakkında soru sormak, kombin önerisi almak veya doğru ürünü bulmak için
 QR kodu okutarak veya ürün açıklamasındaki linke tıklayarak yapay zekaya ulaşabilirsiniz.
 
 💬 Size özel öneriler ve ürün desteği hazır!
-👉 ${targetUrl}`;
+👉 ${targetUrl}
+    `.trim();
 
-    // 1) QR PNG buffer üret
+    const width = 1200;
+    const height = 1600;
+
+    // Arka plan
+    const image = new J(width, height, 0xffffffff);
+
+    // QR oluştur
     const qrBuffer = await QRCode.toBuffer(targetUrl, {
-      width: qrSize,
+      width: 500,
       margin: 1,
     });
 
-    // 2) Boş beyaz zemin oluştur
-    const baseImage = await new J(width, height, 0xffffffff); // beyaz zemin
+    const qr = await J.read(qrBuffer);
 
-    // 3) QR'ı ortala ve ekle
-    const qrImage = await J.read(qrBuffer);
-    const qrX = (width - qrSize) / 2;
-    const qrY = marginTop;
+    qr.resize(500, 500);
 
-    qrImage.resize(qrSize, qrSize);
-    baseImage.composite(qrImage, qrX, qrY);
+    const qrX = (width - 500) / 2;
+    const qrY = 80;
 
-    // 4) Font yükle ve metni QR'ın altına, ortalı yaz
+    image.composite(qr, qrX, qrY);
+
+    // FONT YÜKLE (UTF8 destekli)
     const font = await J.loadFont(J.FONT_SANS_32_BLACK);
 
-    const textMarginX = 40;
-    const textTopY = qrY + qrSize + 40;
-    const textBoxWidth = width - textMarginX * 2;
-    const textBoxHeight = height - textTopY - 40;
+    // Biz text'i manuel bölüyoruz → sağdan soldan taşma yok
+    const wrapped = wrapText(infoText, 40);
 
-    baseImage.print(
+    const textY = qrY + 500 + 80;
+
+    image.print(
       font,
-      textMarginX,
-      textTopY,
+      40,
+      textY,
       {
-        text: infoText,
+        text: wrapped,
         alignmentX: J.HORIZONTAL_ALIGN_CENTER,
         alignmentY: J.VERTICAL_ALIGN_TOP,
       },
-      textBoxWidth,
-      textBoxHeight
+      width - 80,
+      height - textY - 40
     );
 
-    // 5) PNG buffer olarak cevapla
-    const outBuffer = await baseImage.getBufferAsync(J.MIME_PNG);
+    const buffer = await image.getBufferAsync(J.MIME_PNG);
 
     res.setHeader("Content-Type", "image/png");
     res.setHeader(
       "Content-Disposition",
-      `attachment; filename="flowai-qr-${shopId}.png"`
+      `attachment; filename="flowai-${shopId}-qr.png"`
     );
-
-    return res.send(outBuffer);
+    return res.send(buffer);
   } catch (err: any) {
-    console.error("QR Image Error:", err);
-    return res
-      .status(500)
-      .json({ ok: false, error: err?.message || "qr_image_error" });
+    console.log(err);
+    return res.status(500).json({
+      ok: false,
+      error: err.message,
+    });
   }
 });
+
+/**
+ * Basit satır kırma fonksiyonu
+ */
+function wrapText(text: string, maxLength: number) {
+  const lines = [];
+  const words = text.split(" ");
+
+  let line = "";
+
+  for (const word of words) {
+    if ((line + word).length > maxLength) {
+      lines.push(line);
+      line = word;
+    } else {
+      line += " " + word;
+    }
+  }
+
+  lines.push(line);
+
+  return lines.join("\n");
+}
 
 export default qrImageRouter;
