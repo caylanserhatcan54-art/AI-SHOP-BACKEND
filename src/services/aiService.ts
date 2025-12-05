@@ -1,59 +1,42 @@
 import fetch from "node-fetch";
 
-// AI Yanıt Üretici Servis
-export async function generateAIReply(
-  shopId: string,
-  message: string,
-  history: any[]
-) {
+const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
+
+export async function askAI(prompt: string) {
   try {
-    const LM_URL = process.env.LMSTUDIO_API_URL!;
-    const MODEL = process.env.LM_MODEL!;
-
-    console.log("🚀 LMStudio'ya istek gönderiliyor...");
-    console.log("📡 URL:", LM_URL);
-    console.log("🤖 MODEL:", MODEL);
-
-    // Mesaj formatı LMStudio için
-    const formattedHistory = history.map((m: any) => ({
-      role: m.sender === "user" ? "user" : "assistant",
-      content: m.text,
-    }));
-
-    const body = {
-      model: MODEL,
-      messages: [
-        { role: "system", content: "You are FlowAI Assistant" },
-        ...formattedHistory,
-        { role: "user", content: message }
-      ]
-    };
-
-    console.log("📤 SEND BODY:", JSON.stringify(body, null, 2));
-
-    const response = await fetch(LM_URL, {
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
+      headers: {
+        "Authorization": `Bearer ${GROQ_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "llama-3.1-8b-instant",
+        messages: [
+          {
+            role: "system",
+            content: "Sen bir e-ticaret danışmanısın. Kısa, net ve çözüm odaklı cevaplar ver."
+          },
+          {
+            role: "user",
+            content: prompt
+          }
+        ],
+        temperature: 0.7,
+      }),
     });
 
-    console.log("📡 LMStudio STATUS:", response.status);
+    const aiResponse = await response.json();
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("❌ LMStudio RESPONSE ERROR:", errorText);
-      throw new Error("LMStudio API error");
-    }
+    // Model farklı format döndürebildiği için güvenli extraction
+    const result =
+      (aiResponse as any)?.choices?.[0]?.message?.content ||
+      (aiResponse as any)?.text ||
+      JSON.stringify(aiResponse);
 
-    const data = await response.json();
-    console.log("📥 LMStudio RAW RESPONSE:", data);
-
-    const reply =
-      data?.choices?.[0]?.message?.content || "Bir yanıt üretilemedi.";
-
-    return reply;
+    return result;
   } catch (err) {
-    console.error("🔥 generateAIReply ERROR:", err);
-    throw err;
+    console.error("🔥 AI ERROR:", err);
+    return "Şu anda yanıt veremiyorum, lütfen tekrar deneyin.";
   }
 }
