@@ -3,49 +3,42 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.generateAIReply = generateAIReply;
+exports.askAI = askAI;
 const node_fetch_1 = __importDefault(require("node-fetch"));
-// AI Yanıt Üretici Servis
-async function generateAIReply(shopId, message, history) {
+const GROQ_API_KEY = process.env.GROQ_API_KEY || "";
+async function askAI(prompt) {
     var _a, _b, _c;
     try {
-        const LM_URL = process.env.LMSTUDIO_API_URL;
-        const MODEL = process.env.LM_MODEL;
-        console.log("🚀 LMStudio'ya istek gönderiliyor...");
-        console.log("📡 URL:", LM_URL);
-        console.log("🤖 MODEL:", MODEL);
-        // Mesaj formatı LMStudio için
-        const formattedHistory = history.map((m) => ({
-            role: m.sender === "user" ? "user" : "assistant",
-            content: m.text,
-        }));
-        const body = {
-            model: MODEL,
-            messages: [
-                { role: "system", content: "You are FlowAI Assistant" },
-                ...formattedHistory,
-                { role: "user", content: message }
-            ]
-        };
-        console.log("📤 SEND BODY:", JSON.stringify(body, null, 2));
-        const response = await (0, node_fetch_1.default)(LM_URL, {
+        const response = await (0, node_fetch_1.default)("https://api.groq.com/openai/v1/chat/completions", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(body),
+            headers: {
+                "Authorization": `Bearer ${GROQ_API_KEY}`,
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+                model: "llama-3.1-8b-instant",
+                messages: [
+                    {
+                        role: "system",
+                        content: "Sen bir e-ticaret danışmanısın. Kısa, net ve çözüm odaklı cevaplar ver."
+                    },
+                    {
+                        role: "user",
+                        content: prompt
+                    }
+                ],
+                temperature: 0.7,
+            }),
         });
-        console.log("📡 LMStudio STATUS:", response.status);
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error("❌ LMStudio RESPONSE ERROR:", errorText);
-            throw new Error("LMStudio API error");
-        }
-        const data = await response.json();
-        console.log("📥 LMStudio RAW RESPONSE:", data);
-        const reply = ((_c = (_b = (_a = data === null || data === void 0 ? void 0 : data.choices) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.message) === null || _c === void 0 ? void 0 : _c.content) || "Bir yanıt üretilemedi.";
-        return reply;
+        const aiResponse = await response.json();
+        // Model farklı format döndürebildiği için güvenli extraction
+        const result = ((_c = (_b = (_a = aiResponse === null || aiResponse === void 0 ? void 0 : aiResponse.choices) === null || _a === void 0 ? void 0 : _a[0]) === null || _b === void 0 ? void 0 : _b.message) === null || _c === void 0 ? void 0 : _c.content) ||
+            (aiResponse === null || aiResponse === void 0 ? void 0 : aiResponse.text) ||
+            JSON.stringify(aiResponse);
+        return result;
     }
     catch (err) {
-        console.error("🔥 generateAIReply ERROR:", err);
-        throw err;
+        console.error("🔥 AI ERROR:", err);
+        return "Şu anda yanıt veremiyorum, lütfen tekrar deneyin.";
     }
 }
