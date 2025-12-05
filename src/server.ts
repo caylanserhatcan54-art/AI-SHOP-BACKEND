@@ -7,6 +7,7 @@ import productImportRouter from "./routes/productImport";
 import { publicRouter } from "./routes/public";
 import { aiRouter } from "./routes/aiRouter";
 import { qrImageRouter } from "./routes/qrImage"; // burada düzeldi
+import authShopRouter from "./routes/authShop";
 
 dotenv.config();
 
@@ -23,6 +24,7 @@ app.get("/", (req, res) => {
 app.use("/products", productImportRouter);
 app.use("/api/public", publicRouter);
 app.use("/api/ai", aiRouter);
+app.use("/auth", authShopRouter);
 
 // QR IMAGE route
 app.use("/api/qr-image", qrImageRouter);
