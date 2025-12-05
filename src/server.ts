@@ -2,48 +2,41 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
-// ENV mutlaka en üstte
 dotenv.config();
 
-// Firebase bundan sonra import edilmeli ❗❗
+// Firebase init
 import "./config/firebase-admin";
 
 // ROUTES
 import productImportRouter from "./routes/productImport";
 import { publicRouter } from "./routes/public";
 import { aiRouter } from "./routes/aiRouter";
-import { qrDownloadRouter } from "./routes/qrDownload";
-import { qrTextRouter } from "./routes/qrText";
+import { qrImageRouter } from "./routes/qrImage";
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-// ROOT
+// ========================= ROOT ============================
 app.get("/", (req, res) => {
   return res.json({ ok: true, msg: "FlowAI Backend Aktif!" });
 });
 
-// HEALTH
+// ========================= HEALTH ============================
 app.get("/health", (req, res) => res.json({ ok: true }));
 
-// PRODUCT IMPORT
-app.use("/products", productImportRouter);
-
-// PUBLIC ROUTES
-app.use("/api/public", publicRouter);
-
-// AI CHAT ROUTE (GROQ)
+// ========================= AI CHAT ============================
 app.use("/api/ai", aiRouter);
 
-// QR CODE ROUTE
-app.use("/api/qr-download", qrDownloadRouter);
+// ========================= PRODUCT IMPORT ============================
+app.use("/products", productImportRouter);
 
-// QR TEXT ROUTE
-app.use("/api/qr-text", qrTextRouter);
+// ========================= PUBLIC ROUTES ============================
+app.use("/api/public", publicRouter);
 
-// PORT
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () =>
-  console.log("🔥 FlowAI Backend PORT:", PORT, " üzerinde çalışıyor")
-);
+// ========================= QR IMAGE (PNG) ============================
+app.use("/api/qr-image", qrImageRouter);
+
+// ========================= PORT ============================
+const PORT = process.env.PORT || 10000;
+app.listen(PORT, () => console.log("🔥 Backend Running on PORT:", PORT));
