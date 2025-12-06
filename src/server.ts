@@ -2,7 +2,6 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
-// ROUTES
 import productImportRouter from "./routes/productImport";
 import { publicRouter } from "./routes/public";
 import { aiRouter } from "./routes/aiRouter";
@@ -13,26 +12,22 @@ dotenv.config();
 
 const app = express();
 
-app.use(express.json());
-
-// 🚨 CORS BURAYA
+// CORS FIX 🚨
 app.use(
   cors({
     origin: [
       "http://localhost:3000",
-      "https://ai-shop-site.vercel.app",
-      "https://ai-shop-site-*.vercel.app",
-      "https://ai-shop-site-2uew9hg34-serhats-projects-cbfdb63c.vercel.app",
-      "https://serhats-projects-cbfdb63c.vercel.app",
+      "https://ai-shop-site-8c33o3slc-serhats-projects-cbfdb63c.vercel.app",
+      "https://ai-shop-site-rk19afcy8-serhats-projects-cbfdb63c.vercel.app",
+      "https://ai-shop-site.vercel.app"
     ],
-    methods: "GET,POST,PUT,DELETE,OPTIONS",
-    allowedHeaders: "Content-Type, Authorization",
     credentials: true,
+    allowedHeaders: ["Content-Type", "Authorization"],
+    methods: ["GET", "POST", "PUT", "DELETE"]
   })
 );
 
-// OPTION requestlerine özel cevap
-app.options("*", cors());
+app.use(express.json());
 
 // ROOT
 app.get("/", (req, res) => {
@@ -43,10 +38,12 @@ app.get("/", (req, res) => {
 app.use("/products", productImportRouter);
 app.use("/api/public", publicRouter);
 app.use("/api/ai", aiRouter);
+
 app.use("/auth", authShopRouter);
+
+// QR
 app.use("/api/qr-image", qrImageRouter);
 
-// PORT
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, () => {
   console.log("🚀 Backend started at port:", PORT);
