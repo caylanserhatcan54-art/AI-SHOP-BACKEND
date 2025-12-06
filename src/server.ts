@@ -16,14 +16,12 @@ const app = express();
 app.use(
   cors({
     origin: [
-      "http://localhost:3000",
-      "https://ai-shop-site-8c33o3slc-serhats-projects-cbfdb63c.vercel.app",
-      "https://ai-shop-site-rk19afcy8-serhats-projects-cbfdb63c.vercel.app",
-      "https://ai-shop-site.vercel.app"
+      "https://ai-shop-site-e4fho8m3k-serhats-projects-cbfdb63c.vercel.app",
+      "http://localhost:3000"
     ],
     credentials: true,
     allowedHeaders: ["Content-Type", "Authorization"],
-    methods: ["GET", "POST", "PUT", "DELETE"]
+    methods: ["GET", "POST", "PUT", "DELETE"],
   })
 );
 
