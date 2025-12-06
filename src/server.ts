@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
+// ROUTES
 import productImportRouter from "./routes/productImport";
 import { publicRouter } from "./routes/public";
 import { aiRouter } from "./routes/aiRouter";
@@ -14,23 +15,24 @@ const app = express();
 
 app.use(express.json());
 
-// 🔥 CORS AYARLARINI BURAYA KOY
+// 🚨 CORS BURAYA
 app.use(
   cors({
     origin: [
       "http://localhost:3000",
-      "https://ai-shop-site-4l2fnl58t-serhats-projects-cbfdb63c.vercel.app"
+      "https://ai-shop-site.vercel.app",
+      "https://ai-shop-site-*.vercel.app",
+      "https://ai-shop-site-2uew9hg34-serhats-projects-cbfdb63c.vercel.app",
+      "https://serhats-projects-cbfdb63c.vercel.app",
     ],
     methods: "GET,POST,PUT,DELETE,OPTIONS",
-    allowedHeaders: "Content-Type,Authorization",
+    allowedHeaders: "Content-Type, Authorization",
     credentials: true,
   })
 );
 
-// OPTIONS FIX – Mobil ve tarayıcı için kritik
-app.options("*", (_, res) => {
-  res.sendStatus(200);
-});
+// OPTION requestlerine özel cevap
+app.options("*", cors());
 
 // ROOT
 app.get("/", (req, res) => {
@@ -42,8 +44,6 @@ app.use("/products", productImportRouter);
 app.use("/api/public", publicRouter);
 app.use("/api/ai", aiRouter);
 app.use("/auth", authShopRouter);
-
-// QR IMAGE route
 app.use("/api/qr-image", qrImageRouter);
 
 // PORT
