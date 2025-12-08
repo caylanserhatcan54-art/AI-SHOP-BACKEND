@@ -1,20 +1,31 @@
-import express from "express";
-import { db } from "../config/firebase-admin.js";
+import { Router } from "express";
+import { askAssistant } from "../services/assistantService.js";
 
+const router = Router();
 
-const router = express.Router();
+// POST /assistant/:shopId
+router.post("/:shopId", async (req, res) => {
+  try {
+    const shopId = req.params.shopId;
+    const userMessage = req.body.message;
 
-router.post("/", async (req, res) => {
-  const { store_id, message } = req.body;
+    if (!userMessage) {
+      return res.status(400).json({ error: "Message is required" });
+    }
 
-  if (!store_id || !message) {
-    return res.status(400).json({
-      message: "store_id ve message zorunludur",
+    const reply = await askAssistant(shopId, userMessage);
+
+    return res.json({
+      success: true,
+      reply,
+    });
+  } catch (error: any) {
+    console.error("Assistant Error:", error);
+    return res.status(500).json({
+      success: false,
+      error: error.message || "Something went wrong",
     });
   }
-
-  const reply = await getAIResponse(store_id, message);
-  return res.json({ message: reply });
 });
 
 export default router;
