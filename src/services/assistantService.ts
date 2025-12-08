@@ -57,12 +57,26 @@ const TURKISH_STOP_WORDS = [
 function rejectAbsurdIdeas(message: string): string | null {
   const t = normalizeText(message);
 
-  if (t.includes("terlikle kaban"))
-    return "Bence bu çok uyumlu olmadı 😅 Terlik yazlık, kaban kışlık bir ürün. Daha mantıklı bir kombin seçelim.";
-  if (t.includes("montla sandalet"))
-    return "Sandalet ile mont çok uyumsuz olur 😄 Daha dengeli bir kombin söyle istersen.";
-  if (t.includes("botla kırmızı çorap"))
-    return "Kırmızı çorap ayakkabıda tüm odağı çeker, her zaman uymaz 😄 Yalın renk tercih daha iyi olabilir.";
+  const absurdCombos = [
+    {
+      keywords: ["terlik", "kaban"],
+      msg: "Terlikle kaban çok uymaz 😊 Daha dengeli bir kombin öneririm."
+    },
+    {
+      keywords: ["bot", "kırmızı çorap"],
+      msg: "Botla kırmızı çorap pek gitmez 😄 Daha sade bir ton daha iyi olur."
+    },
+    {
+      keywords: ["mont", "sandalet"],
+      msg: "Mont ile sandalet uyumlu durmuyor 😅 istersen alternatif kombin yapayım."
+    }
+  ];
+
+  for (const r of absurdCombos) {
+    if (r.keywords.every((w) => t.includes(normalizeText(w)))) {
+      return r.msg;
+    }
+  }
 
   return null;
 }
@@ -72,10 +86,24 @@ function rejectAbsurdIdeas(message: string): string | null {
  */
 function detectPurchaseIntent(msg: string): "HIGH" | "MID" | "LOW" {
   const t = normalizeText(msg);
-  if (t.includes("alacağım") || t.includes("satın") || t.includes("sepete ekledim"))
+
+  if (
+    t.includes("alacağım") ||
+    t.includes("alayım") ||
+    t.includes("satın") ||
+    t.includes("sepete ekledim") ||
+    t.includes("sepete atacağım")
+  )
     return "HIGH";
-  if (t.includes("bakacağım") || t.includes("düşünüyorum"))
+
+  if (
+    t.includes("bakacağım") ||
+    t.includes("bakayım") ||
+    t.includes("düşünüyorum") ||
+    t.includes("kararsızım")
+  )
     return "MID";
+
   return "LOW";
 }
 
@@ -578,35 +606,6 @@ function usageAndQualityComment(product: Product): string {
 
   return comments.join("\n");
 }
-/**
- * Kullanıcının verdiği absürt fikirleri yakalar
- * ve uygun olmayan önerileri reddeder
- */
-function rejectAbsurdIdeas(message: string): string | null {
-  const t = normalizeText(message);
-
-  // Bazı örnekler:
-  const absurdCombos = [
-    "terlikle kaban",
-    "botla kırmızı çorap",
-    "montla sandalet",
-    "sandalet ile kaban",
-    "kalın bot ile şort",
-    "kazakla mayo",
-    "ceketle terlik"
-  ];
-
-  for (const combo of absurdCombos) {
-    if (t.includes(normalizeText(combo))) {
-      return `Bence bu kombin çok dengeli durmaz 😅  
-Daha uyumlu bir seçim yapalım mı?  
-İstersen ürün önerisi yapayım 👍`;
-    }
-  }
-
-  return null;
-}
-
 
 /**
  * Kullanıcıya ek sorular sorarak konuşmayı geliştirme
@@ -719,37 +718,6 @@ function buildCombinationSuggestion(mainProduct: Product, allProducts: Product[]
 
   return suggestions.join("\n");
 }
-/**
- * Kullanıcının satın alma niyetini analiz eder
- * HIGH: alacak gibi → net öneri
- * MID: düşünüyor → ikna yaklaşımı
- * LOW: sadece sohbet/ilgilenen
- */
-function detectPurchaseIntent(message: string): "HIGH" | "MID" | "LOW" {
-  const t = normalizeText(message);
-
-  if (
-    t.includes("alıcam") ||
-    t.includes("satın alacağım") ||
-    t.includes("sepete atıyorum") ||
-    t.includes("bu iş tamam") ||
-    t.includes("sipariş veriyorum")
-  ) {
-    return "HIGH";
-  }
-
-  if (
-    t.includes("bakarım") ||
-    t.includes("düşünüyorum") ||
-    t.includes("kararsızım") ||
-    t.includes("emin değilim")
-  ) {
-    return "MID";
-  }
-
-  return "LOW";
-}
-
 
 /**
  * “Hangisini almalıyım?”, “En mantıklısı hangisi?” gibi soruları çözer
@@ -1052,7 +1020,6 @@ function logicBasedResponse(
   return null;
 }
 
-
 /**
  * Kullanıcıyı satın almaya yönlendiren cümleler
  */
@@ -1107,4 +1074,146 @@ export function buildFullSmartResponse(
   if (empathy) return main + "\n\n" + empathy;
 
   return main;
+}
+
+function buildReplyForIntent(
+  intent: Intent,
+  userMessage: string,
+  products: Product[],
+  customerName: string | null
+): string {
+  const matches = findMatchingProducts(userMessage, products);
+  const mainProduct: Product | null = matches[0] || null;
+  const storeCategory = detectStoreCategory(products);
+
+  const absurdReply = rejectAbsurdIdeas(userMessage);
+  if (absurdReply) {
+    return absurdReply;
+  }
+
+  const purchaseIntent = detectPurchaseIntent(userMessage);
+
+  const nameSuffix = customerName
+    ? `\n\nSana nasıl hitap edeyim ${customerName} ${
+        customerName.endsWith("a") || customerName.endsWith("e") ? "Hanım" : "Bey"
+      }?`
+    : "";
+
+  if (!products.length) {
+    return (
+      "Henüz mağazaya ürün eklenmemiş görünüyor 😊 Lütfen önce ürünlerinizi ekleyin." +
+      nameSuffix
+    );
+  }
+
+  if (intent === "SMALL_TALK") {
+    return DAILY_TALK_PATTERNS.find(pt => pt.regex.test(userMessage))?.answer
+      || (customerName ? `Buradayım ${customerName} 😊 nasıl yardımcı olabilirim?` : "Buradayım 😊 nasıl yardımcı olabilirim?");
+  }
+
+  if (!mainProduct && intent !== "GREETING") {
+    return (
+      `Şu anda anlattığın ürüne uyan bir ürün bulamadım 😔\n` +
+      `Bu mağaza daha çok **${storeCategory}** ürünleri üzerine.\n\n` +
+      `İstersen ne aradığını biraz daha detaylandırabilirsin.`
+    );
+  }
+
+  switch (intent) {
+    case "GREETING":
+      return (
+        (customerName
+          ? `Merhaba ${customerName} ${
+              customerName.endsWith("a") || customerName.endsWith("e") ? "Hanım" : "Bey"
+            } 👋\n\n`
+          : "Merhaba 👋\n\n") +
+        "Ben FlowAI 😊 Ürünler, kombin, fiyat, tedarik, kargo konusunda yardımcı olabilirim.\nNe arıyorsun?"
+      );
+
+    case "ASK_PRICE":
+      return formatProductSummary(mainProduct!);
+
+    case "ASK_STOCK":
+      return formatProductSummary(mainProduct!) +
+        "\n📦 Ürün stok durumu değişkendir, satış sayfasından takip edebilirsin.";
+
+    case "ASK_COLOR":
+      return formatProductSummary(mainProduct!) +
+        (mainProduct?.color ? `\n🎨 Öne çıkan renk: ${mainProduct.color}` : "\n🎨 Renk varyasyonu ürün sayfasında görünebilir.");
+
+    case "ASK_SIZE":
+      if (storeCategory === "giyim" || storeCategory === "ayakkabı") {
+        return (
+          formatProductSummary(mainProduct!) +
+          "\n📏 Beden seçimi için yorum ve beden tablosuna bakmanı öneririm."
+        );
+      } else {
+        return formatProductSummary(mainProduct!) +
+          "\n📏 Bu üründe ölçü teknik özelliklerde bulunur.";
+      }
+
+    case "ASK_USAGE":
+      return formatProductSummary(mainProduct!) +
+        "\n🔍 Kullanım amacına göre değerlendirebilirsin. Nerede kullanacağını söylersen daha net öneririm.";
+
+    case "ASK_SUITABILITY":
+      return formatProductSummary(mainProduct!) +
+        "\n🧐 Senin kullanım amacına göre değerlendirebilirim. Daha fazla detay verebilirsin.";
+
+    case "ASK_RECOMMENDATION":
+      const recommended = products.slice(0, 3);
+      return (
+        "Sana 3 ürün öneriyorum 🌟\n\n" +
+        recommended.map((p, i) => `#${i + 1}\n${formatProductSummary(p)}`).join("\n\n")
+      );
+
+    case "ASK_COMBINATION":
+      return buildCombinationSuggestion(mainProduct, products);
+
+    case "ASK_SHIPPING":
+      return (
+        "🚚 Kargo genellikle 1-3 iş günü içinde çıkış yapar.\nTeslim süresi bölgeye göre değişir."
+      );
+
+    case "ASK_RETURN":
+      return (
+        "🔄 İade politikası satın aldığın platforma göre değişir.\nGenelde 14 gün içinde kullanılmamış ürünler iade edilir."
+      );
+
+    case "TRACK_ORDER":
+      return (
+        "📦 Kargon nerede diye bakmak için sipariş detay sayfasına gir.\nOrada takip numarası görünür."
+      );
+
+    case "COMPLAINT":
+      return (
+        "😔 Yaşadığın sorun için üzgünüm.\nDetay yazarsan yardımcı olmaya çalışırım."
+      );
+
+    default:
+      return (
+        formatProductSummary(mainProduct!) +
+        "\n\nNasıl yardımcı olabilirim?"
+      );
+  }
+}
+
+export async function generateSmartReply(
+  shopId: string,
+  userMessage: string
+): Promise<string> {
+  const trimmed = (userMessage || "").trim();
+  const name = extractCustomerName(trimmed);
+  const products = await getProductsForShop(shopId);
+  const intent = detectIntent(trimmed);
+
+  return buildReplyForIntent(intent, trimmed, products, name);
+}
+
+export async function getAssistantReply(shopId: string, userMessage: string) {
+  return generateSmartReply(shopId, userMessage);
+}
+
+export async function getAIResponse(shopId: string, userMessage: string) {
+  return generateSmartReply(shopId, userMessage);
 }
