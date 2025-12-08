@@ -1,16 +1,18 @@
 export async function getAssistantReply(shopId: string, userMessage: string) {
-  // Basit örnek — sonra geliştirilecek
-  if (userMessage.toLowerCase().includes("hoşgeldin")) {
+
+  const msg = userMessage.toLowerCase();
+
+  if (msg.includes("hoş")) {
     return "Hoş geldiniz 🤝 Mağazamıza göz atabilirsiniz.";
   }
 
-  if (userMessage.toLowerCase().includes("kargo")) {
-    return "Siparişler en geç 2 iş günü içinde kargoya verilir 📦.";
+  if (msg.includes("kargo")) {
+    return "Siparişlerimiz genelde 2 iş günü içinde çıkmaktadır 📦";
   }
 
-  if (userMessage.toLowerCase().includes("indirim")) {
-    return "Bu hafta seçili ürünlerde %30 indirim var 🎉";
+  if (msg.includes("indirim")) {
+    return "Bu hafta sepette %20 indirim bulunuyor 🎉";
   }
 
-  return "Tam olarak anlayamadım ama size yardımcı olmak isterim 😊";
+  return "Tam anlamadım fakat yardımcı olmak isterim 😊";
 }

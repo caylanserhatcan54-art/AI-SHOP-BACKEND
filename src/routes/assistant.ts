@@ -15,7 +15,8 @@ router.get("/", async (req, res) => {
     const reply = await getAssistantReply(shopId, message);
 
     return res.json({ reply });
-  } catch (err) {
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({ error: "Sunucu hatası" });
   }
 });
