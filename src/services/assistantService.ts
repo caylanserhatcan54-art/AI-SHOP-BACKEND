@@ -4,15 +4,28 @@ export async function generateSmartReply(shopId: string, text: string) {
   const products = await getProductsForShop(shopId);
 
   if (products.length === 0) {
-    return "Henüz ürün bulunamadı 😊 Lütfen ürün ekleyin.";
+    return "Henüz mağazaya ürün eklenmemiş 😊 Lütfen ürün ekleyin.";
   }
 
-  // Kullanıcının ürün isteme ihtimali
-  if (text.toLowerCase().includes("öner")) {
-    const product = products[Math.floor(Math.random() * products.length)];
-    return `Sana ${product.title} önerebilirim 😍\nFiyatı: ${product.price}\nPlatform: ${product.platform}`;
+  // Eğer ürün önerisi isteniyorsa
+  if (text.toLowerCase().includes("öner") ||
+      text.toLowerCase().includes("ürün") ||
+      text.toLowerCase().includes("tavsiye")) {
+        
+    const randomProduct = products[Math.floor(Math.random() * products.length)];
+
+    return `
+🛍️ Sana harika bir ürün öneriyorum:
+
+📌 Ürün: ${randomProduct.baslik || randomProduct.title}
+💰 Fiyat: ${randomProduct.fiyat || randomProduct.price}
+🛒 Platform: ${randomProduct.platform}
+🔗 Link: ${randomProduct.URL || "Bulunamadı"}
+
+😉 Başka ürün arıyorsan söyle!
+    `;
   }
 
-  // Basit fallback gibi
-  return "Tam anlamadım ama ürünler hakkında yardımcı olabilirim 😊";
+  // Basit cevap
+  return "Tam anlayamadım ama yardımcı olmak isterim 😊 Ürün ismi söyleyebilirsin!";
 }
