@@ -1,38 +1,26 @@
-import express, { Request, Response } from "express";
-import { db } from "../config/firebase-admin.js";
+import { Router } from "express";
+import firestoreAdmin from "../config/firebase-admin.js";
 
-const router = express.Router();
+const router = Router();
 
-/**
- * 📌 Trendyol ürün import örneği
- * sen daha sonra gerçek API ekleyeceksin
- */
-router.post("/:shopId", async (req: Request, res: Response) => {
+// ürün importu (örnek endpoint)
+router.post("/:shopId", async (req, res) => {
+  const { shopId } = req.params;
+  const productData = req.body;
+
   try {
-    const { shopId } = req.params;
-    const { products } = req.body;
+    await firestoreAdmin
+      .collection("magazalar")
+      .doc(shopId)
+      .collection("urunler")
+      .add(productData);
 
-    if (!products || !Array.isArray(products)) {
-      return res.status(400).json({ error: "Products array is required" });
-    }
-
-    const batch = db.batch();
-
-    products.forEach((product: any) => {
-      const ref = db.collection("products").doc();
-      batch.set(ref, {
-        shopId,
-        createdAt: new Date(),
-        ...product,
-      });
+    res.json({
+      message: "Ürün başarıyla kaydedildi",
     });
-
-    await batch.commit();
-
-    return res.json({ success: true, count: products.length });
-  } catch (err: any) {
-    console.error("❌ Import error:", err);
-    return res.status(500).json({ error: err.message });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ error: "Ürün kaydı sırasında hata oluştu." });
   }
 });
 
