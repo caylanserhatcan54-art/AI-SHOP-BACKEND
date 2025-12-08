@@ -1,23 +1,19 @@
 import express from "express";
 import cors from "cors";
-import bodyParser from "body-parser";
+
 import aiRouter from "./routes/aiRouter.js";
-import assistantRoutes from "./routes/aiRouter.js";
-
-
 
 const app = express();
-app.use(cors());
-app.use(bodyParser.json());
 
-// HEALTH
+app.use(cors());
+app.use(express.json());
+
 app.get("/", (req, res) => {
-  res.send("FlowAI backend running ✔");
+  res.send("FLOW AI Backend is working 🚀");
 });
 
-// AI ENDPOINT
-app.use("/assistant", assistantRoutes);
+// Yapay zeka endpoint
 app.use("/assistant", aiRouter);
 
-const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log("🔥 API is running on " + PORT));
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log("SERVER LISTENING: " + PORT));
