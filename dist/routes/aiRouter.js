@@ -8,15 +8,7 @@ router.post("/", async (req, res) => {
             message: "store_id ve message zorunludur.",
         });
     }
-    try {
-        const response = await getAIResponse(store_id, message);
-        return res.json({ message: response });
-    }
-    catch (err) {
-        console.error("Assistant Error:", err);
-        return res.status(500).json({
-            message: "Asistan şu anda yanıt veremiyor.",
-        });
-    }
+    const reply = await getAIResponse(store_id, message);
+    return res.json({ message: reply });
 });
 export default router;
