@@ -1,52 +1,38 @@
-import { Router } from "express";
-import { firestoreAdmin } from "../config/firebase-admin.js";
+import express, { Request, Response } from "express";
+import { db } from "../config/firebase-admin.js";
 
-const router = Router();
+const router = express.Router();
 
-router.post("/import", async (req, res) => {
+/**
+ * 📌 Trendyol ürün import örneği
+ * sen daha sonra gerçek API ekleyeceksin
+ */
+router.post("/:shopId", async (req: Request, res: Response) => {
   try {
-    const { shopId, platform, products } = req.body;
+    const { shopId } = req.params;
+    const { products } = req.body;
 
-    if (!shopId || !platform || !Array.isArray(products)) {
-      return res.status(400).json({
-        ok: false,
-        error: "Eksik parametreler: shopId, platform, products",
+    if (!products || !Array.isArray(products)) {
+      return res.status(400).json({ error: "Products array is required" });
+    }
+
+    const batch = db.batch();
+
+    products.forEach((product: any) => {
+      const ref = db.collection("products").doc();
+      batch.set(ref, {
+        shopId,
+        createdAt: new Date(),
+        ...product,
       });
-    }
-
-    const shopRef = db.collection("magazalar").doc(shopId);
-    const platformRef = shopRef.collection("platformlar").doc(platform);
-
-    await shopRef.set(
-      { id: shopId, updatedAt: Date.now() },
-      { merge: true }
-    );
-
-    await platformRef.set(
-      { platform, updatedAt: Date.now() },
-      { merge: true }
-    );
-
-    let savedCount = 0;
-
-    for (const p of products) {
-      const productRef = platformRef.collection("urunler").doc(p.productId);
-      await productRef.set(
-        { ...p, importedAt: Date.now() },
-        { merge: true }
-      );
-      savedCount++;
-    }
-
-    return res.json({
-      ok: true,
-      savedCount,
-      platform,
-      shopId,
     });
+
+    await batch.commit();
+
+    return res.json({ success: true, count: products.length });
   } catch (err: any) {
-    console.error("Import hata:", err);
-    return res.status(500).json({ ok: false, error: err.message });
+    console.error("❌ Import error:", err);
+    return res.status(500).json({ error: err.message });
   }
 });
 
