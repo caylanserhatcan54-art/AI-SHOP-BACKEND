@@ -1,10 +1,28 @@
 import { db } from "../config/firebase-admin.js";
 export async function getProductsForShop(shopId) {
-    const snapshot = await db
-        .collection("products")
-        .where("shopId", "==", shopId)
+    const platformsSnap = await db
+        .collection("magazalar")
+        .doc(shopId)
+        .collection("platformlar")
         .get();
-    const products = [];
-    snapshot.forEach((doc) => products.push(doc.data()));
-    return products;
+    let allProducts = [];
+    for (const platformDoc of platformsSnap.docs) {
+        const platformName = platformDoc.id;
+        const productsSnap = await db
+            .collection("magazalar")
+            .doc(shopId)
+            .collection("platformlar")
+            .doc(platformName)
+            .collection("urunler")
+            .get();
+        productsSnap.docs.forEach((doc) => {
+            const data = doc.data();
+            allProducts.push({
+                id: doc.id,
+                platform: platformName,
+                ...data,
+            });
+        });
+    }
+    return allProducts;
 }

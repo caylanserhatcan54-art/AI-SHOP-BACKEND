@@ -1,37 +1,14 @@
 import { getProductsForShop } from "./productService.js";
-export async function getAssistantReply(shopId, userMessage) {
+export async function generateSmartReply(shopId, text) {
     const products = await getProductsForShop(shopId);
-    if (!products || products.length === 0) {
-        return "Henüz mağazaya ürün eklenmemiş görünüyor 😊 Lütfen ürün ekleyin.";
+    if (products.length === 0) {
+        return "Henüz ürün bulunamadı 😊 Lütfen ürün ekleyin.";
     }
-    const msgLower = userMessage.toLowerCase();
-    // Basit ürün eşleştirme
-    const found = products.find(p => msgLower.includes(p.title.toLowerCase().split(" ")[0]));
-    if (found) {
-        return `
-🛍️ **${found.title}**
-💰 Fiyat: ${found.price}
-
-🖼️ Ürün Görseli:
-${found.image}
-
-🔗 Link:
-${found.url}
-
-Bu ürün aradığınıza gerçekten uygun 👍
-`;
+    // Kullanıcının ürün isteme ihtimali
+    if (text.toLowerCase().includes("öner")) {
+        const product = products[Math.floor(Math.random() * products.length)];
+        return `Sana ${product.title} önerebilirim 😍\nFiyatı: ${product.price}\nPlatform: ${product.platform}`;
     }
-    // Kombin öner
-    if (msgLower.includes("kombin")) {
-        const sample = products.slice(0, 3);
-        return `
-🧵 Kombin önerisi:
-
-${sample.map(p => `⭐ ${p.title} — ${p.price}`).join("\n")}
-
-Tarzınıza uygun öneri gibi duruyor ✨
-`;
-    }
-    // Genel fallback
-    return "Tam anlamadım fakat yardımcı olmak isterim 😊";
+    // Basit fallback gibi
+    return "Tam anlamadım ama ürünler hakkında yardımcı olabilirim 😊";
 }
