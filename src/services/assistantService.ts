@@ -900,120 +900,82 @@ function buildReplyForIntent(
   products: Product[],
   customerName: string | null
 ): string {
+
+  const nameSuffix = customerName ? ` ${customerName}` : "";
   const matches = findMatchingProducts(userMessage, products);
-  const mainProduct: Product | null = matches[0] || null;
-  const storeCategory = detectStoreCategory(products);
-
-  const absurdReply = rejectAbsurdIdeas(userMessage);
-  if (absurdReply) {
-    return absurdReply;
-  }
-
+  const mainProduct = matches[0] || products[0] || null;
   const purchaseIntent = detectPurchaseIntent(userMessage);
+  const absurdIdea = rejectAbsurdIdeas(userMessage);
 
-  const nameSuffix = customerName
-    ? `\n\nSana nasıl hitap edeyim ${customerName} ${
-        customerName.endsWith("a") || customerName.endsWith("e") ? "Hanım" : "Bey"
-      }?`
-    : "";
+  // Absürt kombin engellemesi
+  if (absurdIdea) {
+    return absurdIdea;
+  }
 
-  if (!products.length) {
+  // 3 ürün isteği
+  if (
+    /3 ürün|üç ürün|3 tane öner|3 tane ürün|üç öner|3 öner/i.test(userMessage)
+  ) {
+    const list = products.slice(0, 3);
+
+    if (!list.length) {
+      return "🛍️ Şu an önerilecek ürün bulamadım 😔 Mağazada ürün ekli değil.";
+    }
+
     return (
-      "Henüz mağazaya ürün eklenmemiş görünüyor 😊 Lütfen önce ürünlerinizi ekleyin." +
-      nameSuffix
+      "🛒 Senin için 3 ürün seçtim:\n\n" +
+      list.map((p) => formatProductSummary(p)).join("\n\n") +
+      "\n\nİçlerinden hangisini daha detaylı incelemek istersin?"
     );
   }
 
-  if (intent === "SMALL_TALK") {
-    return DAILY_TALK_PATTERNS.find(pt => pt.regex.test(userMessage))?.answer
-      || (customerName ? `Buradayım ${customerName} 😊 nasıl yardımcı olabilirim?` : "Buradayım 😊 nasıl yardımcı olabilirim?");
-  }
+  // Hangisi mantıklı → kıyaslama
+  if (/hangisi mantıklı|mantıklı hangisi|karşılaştır/i.test(userMessage)) {
+    const list = products.slice(0, 2);
 
-  if (!mainProduct && intent !== "GREETING") {
+    if (list.length < 2) {
+      return "Karşılaştırma yapacak 2 ürün bulamadım 😕";
+    }
+
+    const A = list[0];
+    const B = list[1];
+
     return (
-      `Şu anda anlattığın ürüne uyan bir ürün bulamadım 😔\n` +
-      `Bu mağaza daha çok **${storeCategory}** ürünleri üzerine.\n\n` +
-      `İstersen ne aradığını biraz daha detaylandırabilirsin.`
+      "🧠 Senin için kıyasladım:\n\n" +
+      `👉 **${A.title}**\n- Daha uygun fiyatlı: ${A.price ?? "--"}\n\n` +
+      `👉 **${B.title}**\n- Model olarak daha yeni\n\n` +
+      `🎯 Ben olsam **${A.title}** alırdım. Çünkü daha mantıklı duruyor. 👍`
     );
   }
 
-  switch (intent) {
-    case "GREETING":
-      return (
-        (customerName
-          ? `Merhaba ${customerName} ${
-              customerName.endsWith("a") || customerName.endsWith("e") ? "Hanım" : "Bey"
-            } 👋\n\n`
-          : "Merhaba 👋\n\n") +
-        "Ben FlowAI 😊 Ürünler, kombin, fiyat, tedarik, kargo konusunda yardımcı olabilirim.\nNe arıyorsun?"
-      );
-
-    case "ASK_PRICE":
-      return formatProductSummary(mainProduct!);
-
-    case "ASK_STOCK":
-      return formatProductSummary(mainProduct!) +
-        "\n📦 Ürün stok durumu değişkendir, satış sayfasından takip edebilirsin.";
-
-    case "ASK_COLOR":
-      return formatProductSummary(mainProduct!) +
-        (mainProduct?.color ? `\n🎨 Öne çıkan renk: ${mainProduct.color}` : "\n🎨 Renk varyasyonu ürün sayfasında görünebilir.");
-
-    case "ASK_SIZE":
-      if (storeCategory === "giyim" || storeCategory === "ayakkabı") {
-        return (
-          formatProductSummary(mainProduct!) +
-          "\n📏 Beden seçimi için yorum ve beden tablosuna bakmanı öneririm."
-        );
-      } else {
-        return formatProductSummary(mainProduct!) +
-          "\n📏 Bu üründe ölçü teknik özelliklerde bulunur.";
-      }
-
-    case "ASK_USAGE":
-      return formatProductSummary(mainProduct!) +
-        "\n🔍 Kullanım amacına göre değerlendirebilirsin. Nerede kullanacağını söylersen daha net öneririm.";
-
-    case "ASK_SUITABILITY":
-      return formatProductSummary(mainProduct!) +
-        "\n🧐 Senin kullanım amacına göre değerlendirebilirim. Daha fazla detay verebilirsin.";
-
-    case "ASK_RECOMMENDATION":
-      const recommended = products.slice(0, 3);
-      return (
-        "Sana 3 ürün öneriyorum 🌟\n\n" +
-        recommended.map((p, i) => `#${i + 1}\n${formatProductSummary(p)}`).join("\n\n")
-      );
-
-    case "ASK_COMBINATION":
-      return buildCombinationSuggestion(mainProduct, products);
-
-    case "ASK_SHIPPING":
-      return (
-        "🚚 Kargo genellikle 1-3 iş günü içinde çıkış yapar.\nTeslim süresi bölgeye göre değişir."
-      );
-
-    case "ASK_RETURN":
-      return (
-        "🔄 İade politikası satın aldığın platforma göre değişir.\nGenelde 14 gün içinde kullanılmamış ürünler iade edilir."
-      );
-
-    case "TRACK_ORDER":
-      return (
-        "📦 Kargon nerede diye bakmak için sipariş detay sayfasına gir.\nOrada takip numarası görünür."
-      );
-
-    case "COMPLAINT":
-      return (
-        "😔 Yaşadığın sorun için üzgünüm.\nDetay yazarsan yardımcı olmaya çalışırım."
-      );
-
-    default:
-      return (
-        formatProductSummary(mainProduct!) +
-        "\n\nNasıl yardımcı olabilirim?"
-      );
+  // satın alma niyeti yüksek
+  if (purchaseIntent === "HIGH" && mainProduct) {
+    return (
+      `🛍️ Bence iyi tercih olur${nameSuffix}! ` +
+      `"${mainProduct.title}" kullanıcılar tarafından sık tercih ediliyor.\n\n` +
+      `⭐ Eğer aklındaysa kaçırma derim.\n\n${formatProductSummary(mainProduct)}`
+    );
   }
+
+  // satın alma niyeti kararsız
+  if (purchaseIntent === "MID" && mainProduct) {
+    return (
+      `🧠 Kararsız olman normal${nameSuffix}.` +
+      ` "${mainProduct.title}" gerçekten tercih edilen bir ürün.\n\n` +
+      "İstersen sepete ekle, sonra karar verirsin 😊"
+    );
+  }
+
+  // fallback: ürün varsa
+  if (mainProduct) {
+    return (
+      formatProductSummary(mainProduct) +
+      "\n\nDetay istersen ayrıca sorabilirsin 😊"
+    );
+  }
+
+  // fallback: ürün yoksa
+  return "Şu anda anlattığın ürüne uygun ürün bulamadım 😔 Daha net marka/model söyleyebilirsin.";
 }
 
 export async function generateSmartReply(
