@@ -1,11 +1,11 @@
 // src/services/assistantService.ts
+
 import {
   Product,
   getProductsForShop,
   normalizeText,
 } from "./productService.js";
 
-// Niyetler
 type Intent =
   | "GREETING"
   | "SMALL_TALK"
@@ -24,83 +24,69 @@ type Intent =
   | "COMPLAINT"
   | "UNKNOWN";
 
-const TURKISH_STOP_WORDS = [
-  "ve", "ya", "mi", "mu", "mü", "de", "da", "ile", "bu", "şu",
-  "o", "bir", "icin", "için", "gibi", "ne", "kadar", "var"
-];
-
-// Absürt kombin red
-function rejectAbsurdIdeas(message: string): string | null {
-  const t = normalizeText(message);
-  if (t.includes("terlikle kaban"))
-    return "Bu kombin açıkçası hiç olmamış 😄 Daha uygun kombin önereyim istersen.";
-  if (t.includes("montla sandalet"))
-    return "Bu uymaz gibi görünüyor 😅 Daha dengeli bir şey seçelim.";
+// Kullanıcı absürt/uyumsuz kombin söylediğinde engelle
+function rejectAbsurdIdeas(msg: string): string | null {
+  const t = normalizeText(msg);
+  if (t.includes("terlikle kaban")) return "Terlikle kaban uymaz 😅 Başka alternatif bakabiliriz.";
+  if (t.includes("montla sandalet")) return "Bu kombin açıkçası pek olmamış 😄 Daha iyilerini öneririm.";
+  if (t.includes("botla kırmızı çorap")) return "Bot ile kırmızı çorap uymaz bence 😅 Başka renk öneriyim istersen.";
   return null;
 }
 
-// Satın alma niyeti
+// Müşteri satın alma niyet derecesi
 function detectPurchaseIntent(msg: string): "HIGH" | "MID" | "LOW" {
   const t = normalizeText(msg);
   if (t.includes("alacağım") || t.includes("satın") || t.includes("sepete"))
     return "HIGH";
-  if (t.includes("bakacağım") || t.includes("incelerim"))
+  if (t.includes("düşünüyorum") || t.includes("bakarım"))
     return "MID";
   return "LOW";
 }
 
-// Sohbet cümleleri
 const DAILY_TALK_PATTERNS: { regex: RegExp; answer: string }[] = [
   {
-    regex: /(nasılsın|nasilsin|naber|napıyorsun|napıyon)/i,
-    answer: "Çok iyiyim 😊 Sen nasılsın?"
+    regex: /(nasılsın|nasilsin|ne haber|nabersin|ne yapıyorsun|napıyon)/i,
+    answer: "Çok iyiyim 😊 Sen nasılsın?",
   },
   {
-    regex: /(iyiyim|fena değil)/i,
-    answer: "Harika 🎉 Bugün ne bakıyorsun, nasıl yardımcı olayım?"
+    regex: /(gerçek misin|bot musun|yapay zeka)/i,
+    answer: "Ben FlowAI 🤖 gerçek bir asistana benzer şekilde çalışıyorum.",
   },
   {
-    regex: /(sıkıldım|moralim bozuk)/i,
-    answer: "Üzülme 😌 Birlikte güzel ürünlere bakalım mı?"
+    regex: /(canım sıkıldı|canim sıkıldı)/i,
+    answer:
+      "Üzülme 😌 Yeni ürünler bakmak iyi gelir, dilersen öneri yapabilirim!",
   },
-  {
-    regex: /(bot musun|yapay zeka|gerçek misin)/i,
-    answer: "Ben FlowAI 🤖 Mağazanın akıllı danışmanıyım!"
-  }
 ];
 
-// İsim yakalama
-const NAME_PATTERN = /(adım|benim adım|bana)[: ]+([a-zA-ZığüşöçİĞÜŞÖÇ]+)/i;
+const NAME_PATTERN =
+  /(benim adım|adım|bana)[: ]+([a-zA-ZığüşöçİĞÜŞÖÇ]+)/i;
+
+let knownCustomerName: string | null = null;
 
 function extractCustomerName(msg: string): string | null {
   const m = msg.match(NAME_PATTERN);
   if (!m) return null;
-  const raw = m[2];
-  return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+  const clean =
+    m[2].charAt(0).toUpperCase() + m[2].slice(1).toLowerCase();
+  knownCustomerName = clean;
+  return clean;
 }
-
-// İsim hatırlama
-let knownCustomerName: string | null = null;
 
 function detectStoreCategory(products: Product[]): string {
   if (!products.length) return "genel";
-
-  const all = products.map(p => (p.title ?? "").toLowerCase()).join(" ");
-
-  if (all.includes("pantolon") || all.includes("kazak") || all.includes("gömlek")) return "giyim";
-  if (all.includes("ayakkabı")) return "ayakkabı";
-  if (all.includes("telefon") || all.includes("bilgisayar")) return "elektronik";
-  if (all.includes("matkap") || all.includes("vida")) return "hırdavat";
-  if (all.includes("çadır") || all.includes("kamp")) return "kamp";
-  if (all.includes("oyuncak")) return "oyuncak";
-
+  const allText = products.map(p => p.title.toLowerCase()).join(" ");
+  if (allText.includes("pantolon") || allText.includes("kazak") || allText.includes("gömlek")) return "giyim";
+  if (allText.includes("ayakkabı") || allText.includes("sneaker")) return "ayakkabı";
+  if (allText.includes("bilgisayar") || allText.includes("telefon")) return "elektronik";
+  if (allText.includes("vida") || allText.includes("matkap") || allText.includes("hırdavat")) return "hırdavat";
+  if (allText.includes("oyuncak")) return "oyuncak";
   return "genel";
 }
-
 function detectIntent(msg: string): Intent {
   const t = normalizeText(msg);
 
-  if (t.includes("nasilsin") || t.includes("napıyorsun")) return "SMALL_TALK";
+  if (t.includes("nasilsin") || t.includes("napıyorsun") || t.includes("gerçek misin")) return "SMALL_TALK";
   if (t.includes("merhaba") || t.includes("selam")) return "GREETING";
   if (t.includes("fiyat") || t.includes("kaç")) return "ASK_PRICE";
   if (t.includes("stok") || t.includes("kalmış")) return "ASK_STOCK";
@@ -108,112 +94,204 @@ function detectIntent(msg: string): Intent {
   if (t.includes("beden") || t.includes("numara")) return "ASK_SIZE";
   if (t.includes("malzeme") || t.includes("kalite")) return "ASK_MATERIAL";
   if (t.includes("nerede kullanılır") || t.includes("hangi amaçla")) return "ASK_USAGE";
-  if (t.includes("uygun mu") || t.includes("olur mu")) return "ASK_SUITABILITY";
-  if (t.includes("öneri") || t.includes("hangisini") || t.includes("ne önerirsin")) return "ASK_RECOMMENDATION";
+  if (t.includes("uygun mu")) return "ASK_SUITABILITY";
+  if (t.includes("öner") || t.includes("tavsiye") || t.includes("hangi ürünü alayım")) return "ASK_RECOMMENDATION";
   if (t.includes("kombin") || t.includes("ne ile gider")) return "ASK_COMBINATION";
   if (t.includes("kargo") || t.includes("ne zaman gelir")) return "ASK_SHIPPING";
   if (t.includes("iade") || t.includes("değişim")) return "ASK_RETURN";
-  if (t.includes("kargom nerede") || t.includes("sipariş")) return "TRACK_ORDER";
-  if (t.includes("şikayet") || t.includes("kötü")) return "COMPLAINT";
+  if (t.includes("kargom") || t.includes("siparişim nerede")) return "TRACK_ORDER";
+  if (t.includes("şikayet")) return "COMPLAINT";
 
   return "UNKNOWN";
 }
 
 function findMatchingProducts(msg: string, products: Product[]): Product[] {
-  const norm = normalizeText(msg);
-  const firstToken = norm.split(" ")[0];
-  return products.filter(p => normalizeText(p.title).includes(firstToken)).slice(0, 5);
+  const n = normalizeText(msg)
+    .split(" ")
+    .filter((x) => x.length > 2);
+
+  const matches = products.filter((p) => {
+    const name = normalizeText(p.title);
+    return n.some((token) => name.includes(token));
+  });
+
+  return matches.length ? matches.slice(0, 3) : products.slice(0, 1);
 }
 
 function formatProductSummary(p: Product): string {
-  let lines = `✨ **${p.title}**\n`;
+  let out = `✨ **${p.title}**`;
 
-  if (p.price) lines += `💰 Fiyat: ${p.price}\n`;
-  if ((p as any).image) lines += `🖼️ Görsel: ${(p as any).image}\n`;
-  if (p.url) lines += `🔗 Link: ${p.url}\n`;
+  if (p.price) out += `\n💰 Fiyat: ${p.price}`;
+  if ((p as any).imageUrl) out += `\n🖼️ Görsel: ${(p as any).imageUrl}`;
+  if ((p as any).image) out += `\n🖼️ Görsel: ${(p as any).image}`;
+  if (p.url) out += `\n🔗 Link: ${p.url}`;
+  if (p.category) out += `\n📂 Kategori: ${p.category}`;
 
-  return lines;
+  return out;
 }
-
 function buildReplyForIntent(
   intent: Intent,
-  message: string,
+  userMessage: string,
   products: Product[],
   customerName: string | null
 ): string {
-
-  if (customerName) knownCustomerName = customerName;
-  const matches = findMatchingProducts(message, products);
+  const matches = findMatchingProducts(userMessage, products);
   const main = matches[0] || products[0];
-  const category = detectStoreCategory(products);
 
-  const absurdityCheck = rejectAbsurdIdeas(message);
-  if (absurdityCheck) return absurdityCheck;
+  const storeType = detectStoreCategory(products);
+  const absurdCheck = rejectAbsurdIdeas(userMessage);
+
+  // Önce absürt fikir engelleme
+  if (absurdCheck) {
+    return absurdCheck +
+      "\nAma seni yalnız bırakmam, sana güzel bir alternatif önereyim:\n\n" +
+      formatProductSummary(main);
+  }
+
+  // Müşteri adı gösterimi 💬
+  const namePrefix = customerName
+    ? `${customerName.endsWith("a") || customerName.endsWith("e") ? customerName + " Hanım" : customerName + " Bey"} `
+    : "";
 
   switch (intent) {
-
     case "GREETING":
-      return `Merhaba ${knownCustomerName ?? ""} 👋
-Ben FlowAI. Ne arıyorsun?`;
+      return (
+        `Merhaba ${namePrefix}👋\nBen FlowAI 😊\nMağazadaki ürünler ile ilgili yardımcı olabilirim.\n\n` +
+        "✨ Ürün önerisi isteyebilirsin\n" +
+        "👗 Kombin sorabilirsin\n" +
+        "📦 Kargo veya stok durumunu sorabilirsin\n"
+      );
 
     case "SMALL_TALK":
-      return DAILY_TALK_PATTERNS.find(pt => pt.regex.test(message))?.answer
-        ?? "Buradayım 😊 Ürün istersen söyle!";
+      const foundPattern = DAILY_TALK_PATTERNS.find((p) => p.regex.test(userMessage));
+      if (foundPattern) {
+        return foundPattern.answer.replace("😊", `😊 ${namePrefix}`);
+      }
+
+      return (
+        `Buradayım ${namePrefix}😇 Sana nasıl destek olabilirim?\n` +
+        "Ürün fiyatı, stok, öneri, kombin gibi her konuda yazabilirsin."
+      );
 
     case "ASK_PRICE":
-      return formatProductSummary(main);
+      return formatProductSummary(main) +
+        `\n\n💬 ${namePrefix}fiyatla ilgili başka bir ürün sorabilirsin.`;
 
-    case "ASK_RECOMMENDATION":
-      return `Sana birkaç ürün öneriyorum 🌟\n\n` +  
-        findMatchingProducts(message, products).slice(0, 3).map(formatProductSummary).join("\n");
+    case "ASK_STOCK":
+      return (
+        formatProductSummary(main) +
+        "\n\n📦 Stok bilgisi platform üzerinden anlık güncellenir."
+      );
 
-    case "ASK_COMBINATION":
-      return `Bu ürünle şunlar uyumlu olur 👇
-👚 Sade üst  
-👖 Tek renk pantolon  
-👟 Açık renk sneaker`;
+    case "ASK_COLOR":
+      return (
+        formatProductSummary(main) +
+        "\n\n🎨 Renk seçenekleri varyasyon bölümünde yer alabilir."
+      );
+
+    case "ASK_SIZE":
+      return (
+        formatProductSummary(main) +
+        "\n\n📏 İki beden arasında kaldıysan konfor için büyük tercih önerilir."
+      );
+
+    case "ASK_MATERIAL":
+      return (
+        formatProductSummary(main) +
+        "\n\n🧵 Malzeme kalitesi kullanım deneyimini doğrudan etkiler."
+      );
 
     case "ASK_USAGE":
-      return formatProductSummary(main) +  
-        `\nBu ürün kullanım amacına göre oldukça uygun 👍`;
+    case "ASK_SUITABILITY":
+      return (
+        formatProductSummary(main) +
+        "\n\n🔍 Kullanım amacına göre doğru ürün seçimi için ürün detaylarını inceleyebilirsin.\n"
+      );
+
+    case "ASK_RECOMMENDATION":
+      return (
+        `Sana harika öneriler buldum ${namePrefix}🌟\n\n` +
+        matches.map((m) => formatProductSummary(m)).join("\n\n") +
+        "\n\n👍 Bunlardan hangisi daha yakın, söyle ona göre kombin hazırlayayım."
+      );
+
+    case "ASK_COMBINATION":
+      return buildCombinationSuggestion(main, products);
 
     case "ASK_SHIPPING":
-      return `🚚 **Kargo Bilgisi**
-Ürünler genelde 1-3 iş günü içinde kargolanır.
-Kesin süre platform sipariş sayfasında görünür.`;
+      return (
+        `🚚 Kargo süreci ile ilgili bilgi vereyim ${namePrefix}\n\n` +
+        "Ürünler genelde 1-3 iş günü içinde kargoya verilir."
+      );
 
     case "ASK_RETURN":
-      return `🔄 **İade & Değişim Bilgisi**
+      return (
+        "🔄 İade & Değişim Bilgisi:\n" +
+        "Ürün kullanılmadan ve paketi bozulmadan iade edilebilir."
+      );
 
-İade süreci platformun kurallarına göre işler.
-📌 Genel olarak:
-• Ürünü kullanmadan iade edebilirsin  
-• Çoğu platformda **14 gün içinde iade hakkı vardır**  
-• Fatura ve ambalajı saklamanı öneririm`;
+    case "TRACK_ORDER":
+      return (
+        "📦 Sipariş takibi için sipariş geçmişinden takip numaranı görebilirsin."
+      );
 
     case "COMPLAINT":
-      return `Üzgünüm bunu yaşamana 😔  
-Detay yaz, yardımcı olmaya çalışayım.`
+      return (
+        "Üzgünüm böyle bir durum yaşaman kötü oldu 😔\n" +
+        "Detay verdiğinde elimden geldiğince yönlendirebilirim."
+      );
 
+    case "UNKNOWN":
     default:
-      return formatProductSummary(main) + "\n\nNasıl yardımcı olayım?";
+      return (
+        formatProductSummary(main) +
+        `\n\n${namePrefix}Tam olarak ne öğrenmek istiyorsun? 😊`
+      );
   }
 }
-
+/**
+ * DIŞA AÇTIĞIMIZ ASIL FONKSİYON
+ * routes/assistant.ts burayı çağırıyor
+ */
 export async function generateSmartReply(
   shopId: string,
-  message: string
-) {
-  const name = extractCustomerName(message);
+  userMessage: string
+): Promise<string> {
+  const trimmed = (userMessage || "").trim();
+
+  if (!trimmed) {
+    return "Merhaba 👋 Ne hakkında yardımcı olmamı istersin? Ürün, kombin, fiyat, stok veya kargo hakkında soru sorabilirsin.";
+  }
+
+  // Müşteri adını yakala
+  const customerName = extractCustomerName(trimmed);
+
+  // Mağaza ürünlerini çek
   const products = await getProductsForShop(shopId);
-  const intent = detectIntent(message);
-  return buildReplyForIntent(intent, message, products, name);
+
+  // Intent tespiti
+  const intent = detectIntent(trimmed);
+
+  // Nihai cevap üret
+  const reply = buildReplyForIntent(intent, trimmed, products, customerName);
+
+  return reply;
 }
 
-export async function getAssistantReply(shopId: string, message: string) {
-  return generateSmartReply(shopId, message);
+/**
+ * Geriye dönük uyumluluk için eklenmiş wrapper fonksiyonlar
+ * (aiRouter, webhook, eski sürüm entegrasyonları çalışsın diye)
+ */
+export async function getAssistantReply(
+  shopId: string,
+  userMessage: string
+): Promise<string> {
+  return generateSmartReply(shopId, userMessage);
 }
 
-export async function getAIResponse(shopId: string, message: string) {
-  return generateSmartReply(shopId, message);
+export async function getAIResponse(
+  shopId: string,
+  userMessage: string
+): Promise<string> {
+  return generateSmartReply(shopId, userMessage);
 }
