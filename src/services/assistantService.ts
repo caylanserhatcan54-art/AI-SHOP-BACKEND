@@ -1,19 +1,27 @@
-export async function getAIResponse(shopId: string, message: string) {
-  let reply = "";
+export async function getAssistantReply(shopId: string, userMessage: string) {
+  userMessage = userMessage.toLowerCase();
 
-  const msg = message.toLowerCase();
-
-  if (msg.includes("merhaba")) {
-    reply = "Merhaba! Size nasıl yardımcı olabilirim? 😊";
-  } else if (msg.includes("kargo")) {
-    reply = "Kargonuz hazırlanıyor 🚚 Kısa süre içinde yola çıkacak!";
-  } else if (msg.includes("fiyat")) {
-    reply = "Hangi ürün için fiyat bilgisi istersiniz?";
-  } else if (msg.includes("ürün")) {
-    reply = "Elimizdeki ürünleri inceliyorum 🔍 Sizin için en iyilerini sunacağım.";
-  } else {
-    reply = "Tam anlayamadım ama yardımcı olmak isterim 😊";
+  // Temel cevap kuralları
+  if (userMessage.includes("merhaba") || userMessage.includes("selam")) {
+    return "Merhaba 👋! Sana nasıl yardımcı olabilirim?";
   }
 
-  return reply;
+  if (userMessage.includes("kargo")) {
+    return "Kargo takip için sipariş numaranızı iletir misiniz? 📦";
+  }
+
+  if (userMessage.includes("fiyat")) {
+    return "Ürün fiyatlarımız modele ve özelliklere göre değişmektedir. Hangi ürünün fiyatını öğrenmek istersiniz?";
+  }
+
+  if (userMessage.includes("iade") || userMessage.includes("iptal")) {
+    return "İade ve iptal süreçleri mağaza politikalarına göre değişmektedir. Sipariş numarasını iletir misiniz?";
+  }
+
+  if (userMessage.includes("ürün tavsiye") || userMessage.includes("ne önerirsin")) {
+    return "Kullanım amacını söylersen uygun ürün önerisi yapabilirim 🤖";
+  }
+
+  // Her soruda fallback cevap
+  return "Sorunuzu tam anlayamadım 😔 biraz daha detaylandırabilir misiniz?";
 }
