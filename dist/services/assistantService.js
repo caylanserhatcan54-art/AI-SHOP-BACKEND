@@ -1,21 +1,34 @@
 import { getProductsForShop } from "./productService.js";
-export async function generateSmartReply(shopId, msg) {
-    msg = msg.toLowerCase();
+export async function getAssistantReply(shopId, message) {
     const products = await getProductsForShop(shopId);
     if (!products || products.length === 0) {
-        return "Mağazada kayıtlı ürün bulunamadı 😔";
+        return "Mağazanızda ürün bulunamadı. Lütfen ürün ekleyin 😊";
     }
-    // Ürün eşleşmesi
-    const found = products.find(p => msg.includes(p.name.toLowerCase().split(" ")[0]));
-    if (!found) {
-        return "Tam anlayamadım, lütfen ürün adını tekrar söyler misiniz? 😊";
-    }
-    // Basit zeka cevabı
-    const reply = `
-🛍 *${found.name}*
-💰 Fiyat: ${found.price}
-🔗 Link: ${found.productUrl}
+    const msgLower = message.toLowerCase();
+    // Ürün arama
+    const found = products.find(p => msgLower.includes(p.title.toLowerCase().split(" ")[0]));
+    if (found) {
+        return `
+${found.title}
+Fiyat: ${found.price}
+Görsel:
+${found.image}
+Link:
+${found.url}
 
-Bu ürün gayet kaliteli bir üründür. Kullanıcı geri dönüşleri oldukça olumlu. Tavsiye ederim 😊`;
-    return reply;
+Bu ürün tam aradığınıza uygun 👍
+`;
+    }
+    // Kombin önerisi
+    if (msgLower.includes("kombin")) {
+        const sample = products.slice(0, 3);
+        return `
+Size şahane bir kombin öneriyorum 🧵✨
+
+${sample.map(p => `⭐ ${p.title} — ${p.price}`).join("\n")}
+
+👉 Bu kombin günlük kullanım için harika!
+`;
+    }
+    return "Tam anlamadım fakat yardımcı olmak isterim 😊";
 }
