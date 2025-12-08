@@ -1,24 +1,14 @@
 // src/services/assistantService.ts
+
 import {
   Product,
   getProductsForShop,
   normalizeText,
 } from "./productService.js";
 
-// 👉 Yeni ekleme: Fiyat segmenti algılama
-function detectPriceSegment(priceText: string | undefined): "LOW" | "MID" | "HIGH" | null {
-  if (!priceText) return null;
-
-  const onlyNumber = priceText.replace(/[₺,.]/g, "").trim();
-  const price = parseInt(onlyNumber);
-
-  if (!price || isNaN(price)) return null;
-
-  if (price < 300) return "LOW";
-  if (price < 1000) return "MID";
-  return "HIGH";
-}
-
+/**
+ * Kullanıcı konuşma niyeti
+ */
 type Intent =
   | "GREETING"
   | "SMALL_TALK"
@@ -37,6 +27,9 @@ type Intent =
   | "COMPLAINT"
   | "UNKNOWN";
 
+/**
+ * Türkçe anlamsız kelimeler
+ */
 const TURKISH_STOP_WORDS = [
   "ve",
   "ya",
@@ -58,314 +51,1060 @@ const TURKISH_STOP_WORDS = [
   "var",
 ];
 
+/**
+ * Absürt kombin engelleme
+ */
 function rejectAbsurdIdeas(message: string): string | null {
   const t = normalizeText(message);
 
-  if (t.includes("terlikle kaban") || t.includes("botla kırmızı çorap"))
-    return "🤨 Bu öneri biraz ters köşe oldu diyebilirim. Daha uyumlu seçimler yapalım istersen 😊";
-
+  if (t.includes("terlikle kaban"))
+    return "Bence bu çok uyumlu olmadı 😅 Terlik yazlık, kaban kışlık bir ürün. Daha mantıklı bir kombin seçelim.";
   if (t.includes("montla sandalet"))
-    return "🧐 Sence de bu kombin biraz tuhaf değil mi? Aynı mevsime ait ürünlerle kombin yapalım.";
+    return "Sandalet ile mont çok uyumsuz olur 😄 Daha dengeli bir kombin söyle istersen.";
+  if (t.includes("botla kırmızı çorap"))
+    return "Kırmızı çorap ayakkabıda tüm odağı çeker, her zaman uymaz 😄 Yalın renk tercih daha iyi olabilir.";
 
   return null;
 }
 
+/**
+ * Müşteri satın alma niyeti tespiti
+ */
 function detectPurchaseIntent(msg: string): "HIGH" | "MID" | "LOW" {
   const t = normalizeText(msg);
-
-  if (t.includes("alacağım") || t.includes("satın") || t.includes("sepete"))
+  if (t.includes("alacağım") || t.includes("satın") || t.includes("sepete ekledim"))
     return "HIGH";
-
   if (t.includes("bakacağım") || t.includes("düşünüyorum"))
     return "MID";
-
   return "LOW";
 }
 
+/**
+ * Günlük konuşma cevapları
+ */
 const DAILY_TALK_PATTERNS: { regex: RegExp; answer: string }[] = [
   {
-    regex: /(nasılsın|nasilsin|naber|napıyorsun|napıyon)/i,
-    answer: "Çok iyiyim 😊 Sana yardımcı olmak için buradayım. Sen nasılsın?",
-  },
-  {
-    regex: /(iyiyim|fena değil)/i,
-    answer:
-      "Harika! 🙌 Peki şimdi hangi ürüne bakıyoruz, nasıl yardımcı olabilirim?",
+    regex: /(nasılsın|nasilsin|napıyorsun|ne yapıyorsun)/i,
+    answer: "İyiyim ve buradayım 😊 Sen nasılsın?",
   },
   {
     regex: /(canım sıkıldı|sıkıldım)/i,
-    answer:
-      "Anlıyorum 😌 İstersen sana tarzına uygun birkaç ürün önereyim, moral yükseltelim 🎁",
+    answer: "Üzülme 😌 biraz güzel ürünler gösteriyim ister misin?",
   },
   {
-    regex: /(gerçek misin|yapay zeka)/i,
-    answer:
-      "Ben FlowAI 🤖 Mağazanın akıllı asistanıyım. Ürün tavsiyesi, kombin, kalite analizi her şey bende ✨",
+    regex: /(bot musun|yapay zeka misin|gerçek misin)/i,
+    answer: "Ben FlowAI 🤖 Gerçek bir yardımcı değilim ama sana gerçek öneriler veriyorum 😊",
   },
 ];
 
+/**
+ * Kullanıcı adını yakalama
+ */
 const NAME_PATTERN =
-  /(benim adım|benim adim|adım|adim|bana)[: ]+([a-zA-ZığüşöçİĞÜŞÖÇ]+)/i;
-
-let knownCustomerName: string | null = null;
+  /(benim adım|adım|bana)[: ]+([a-zA-ZığüşöçİĞÜŞÖÇ]+)/i;
 
 function extractCustomerName(msg: string): string | null {
-  const m = msg.match(NAME_PATTERN);
-  if (!m) return null;
-  const raw = m[2];
-  return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
+  const match = msg.match(NAME_PATTERN);
+  if (!match) return null;
+
+  const name = match[2];
+  return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
 }
 
+let KNOWN_NAME: string | null = null;
+/**
+ * Mağaza kategorisini ürünlerden tahmin et
+ */
 function detectStoreCategory(products: Product[]): string {
   if (!products.length) return "genel";
 
-  const all = products.map(p => (p.title || "").toLowerCase()).join(" ");
+  const all = products
+    .map((p) => (p.title || "").toLowerCase())
+    .join(" ");
 
-  if (all.includes("pantolon") || all.includes("kazak") || all.includes("gömlek")) return "giyim";
-  if (all.includes("ayakkabı") || all.includes("sneaker")) return "ayakkabı";
-  if (all.includes("bilgisayar") || all.includes("telefon")) return "elektronik";
-  if (all.includes("matkap") || all.includes("tornavida")) return "hırdavat";
-  if (all.includes("çadır") || all.includes("kamp")) return "kamp";
-  if (all.includes("oyuncak")) return "oyuncak";
+  if (
+    all.includes("pantolon") ||
+    all.includes("elbise") ||
+    all.includes("kazak") ||
+    all.includes("gömlek") ||
+    all.includes("gomlek") ||
+    all.includes("etek") ||
+    all.includes("tunik") ||
+    all.includes("ceket")
+  ) {
+    return "giyim";
+  }
+
+  if (
+    all.includes("ayakkabı") ||
+    all.includes("ayakkabi") ||
+    all.includes("sneaker") ||
+    all.includes("bot") ||
+    all.includes("spor ayakkabı") ||
+    all.includes("spor ayakkabi")
+  ) {
+    return "ayakkabı";
+  }
+
+  if (
+    all.includes("bilgisayar") ||
+    all.includes("laptop") ||
+    all.includes("notebook") ||
+    all.includes("telefon") ||
+    all.includes("kulaklık") ||
+    all.includes("kulaklik") ||
+    all.includes("televizyon") ||
+    all.includes("monitor") ||
+    all.includes("monitör") ||
+    all.includes("tablet")
+  ) {
+    return "elektronik";
+  }
+
+  if (
+    all.includes("matkap") ||
+    all.includes("vida") ||
+    all.includes("şarjlı tornavida") ||
+    all.includes("sarik tornavida") ||
+    all.includes("hırdavat") ||
+    all.includes("hirdavat") ||
+    all.includes("anahtar takımı") ||
+    all.includes("ingiliz anahtarı")
+  ) {
+    return "hırdavat";
+  }
+
+  if (
+    all.includes("çadır") ||
+    all.includes("cadir") ||
+    all.includes("kamp sandalyesi") ||
+    all.includes("kamp masası") ||
+    all.includes("uyku tulumu") ||
+    all.includes("kamp")
+  ) {
+    return "kamp-outdoor";
+  }
+
+  if (
+    all.includes("oyuncak") ||
+    all.includes("lego") ||
+    all.includes("figür") ||
+    all.includes("figür") ||
+    all.includes("bebek") ||
+    all.includes("oyun hamuru")
+  ) {
+    return "oyuncak";
+  }
+
+  if (
+    all.includes("dumbbell") ||
+    all.includes("halter") ||
+    all.includes("koşu bandı") ||
+    all.includes("kosu bandi") ||
+    all.includes("pilates") ||
+    all.includes("yoga matı") ||
+    all.includes("yoga mat")
+  ) {
+    return "spor";
+  }
+
+  if (
+    all.includes("yüzücü gözlüğü") ||
+    all.includes("palet") ||
+    all.includes("şnorkel") ||
+    all.includes("deniz gözlüğü")
+  ) {
+    return "su-sporlari";
+  }
+
   return "genel";
 }
 
+/**
+ * Kullanıcının mesajından intent (niyet) çıkar
+ */
 function detectIntent(msg: string): Intent {
   const t = normalizeText(msg);
 
-  if (t.includes("nasilsin") || t.includes("napıyorsun")) return "SMALL_TALK";
-  if (t.includes("merhaba") || t.includes("selam")) return "GREETING";
-  if (t.includes("fiyat") || t.includes("kaç")) return "ASK_PRICE";
-  if (t.includes("stok")) return "ASK_STOCK";
-  if (t.includes("renk")) return "ASK_COLOR";
-  if (t.includes("numara") || t.includes("beden")) return "ASK_SIZE";
-  if (t.includes("malzeme") || t.includes("kalite")) return "ASK_MATERIAL";
-  if (t.includes("kullanılır")) return "ASK_USAGE";
-  if (t.includes("uygun mu")) return "ASK_SUITABILITY";
-  if (t.includes("öner")) return "ASK_RECOMMENDATION";
-  if (t.includes("kombin")) return "ASK_COMBINATION";
-  if (t.includes("kargo") || t.includes("teslimat")) return "ASK_SHIPPING";
-  if (t.includes("iade") || t.includes("değişim")) return "ASK_RETURN";
-  if (t.includes("takip") || t.includes("sipariş")) return "TRACK_ORDER";
-  if (t.includes("şikayet") || t.includes("kötü")) return "COMPLAINT";
+  // SMALL TALK – önce genel sohbet
+  if (
+    t.includes("nasilsin") ||
+    t.includes("naber") ||
+    t.includes("napıyorsun") ||
+    t.includes("ne yapiyorsun") ||
+    t.includes("bot musun") ||
+    t.includes("yapay zeka") ||
+    t.includes("gercek misin") ||
+    t.includes("gerçek misin")
+  ) {
+    return "SMALL_TALK";
+  }
+
+  // Selamlaşma
+  if (
+    t.includes("merhaba") ||
+    t.includes("selam") ||
+    t.includes("slm") ||
+    t.includes("iyi gunler") ||
+    t.includes("iyi günler") ||
+    t.includes("günaydın") ||
+    t.includes("gunaydin") ||
+    t.includes("iyi aksamlar") ||
+    t.includes("iyi akşamlar")
+  ) {
+    return "GREETING";
+  }
+
+  // Fiyat soruları
+  if (
+    t.includes("fiyat") ||
+    t.includes("kaca") ||
+    t.includes("kaça") ||
+    t.includes("ne kadar") ||
+    t.includes("ucret") ||
+    t.includes("ücret") ||
+    t.includes("kaç tl") ||
+    t.includes("kac tl")
+  ) {
+    return "ASK_PRICE";
+  }
+
+  // Stok soruları
+  if (
+    t.includes("stok") ||
+    t.includes("var mi") ||
+    t.includes("varmı") ||
+    t.includes("kalmis mi") ||
+    t.includes("kalmış mı") ||
+    t.includes("tukendi mi") ||
+    t.includes("tükendi mi") ||
+    t.includes("yeniden gelir mi") ||
+    t.includes("tekrar gelir mi")
+  ) {
+    return "ASK_STOCK";
+  }
+
+  // Renk soruları
+  if (
+    t.includes("renk") ||
+    t.includes("baska renk") ||
+    t.includes("başka renk") ||
+    t.includes("hangi renk") ||
+    t.includes("renk secenegi") ||
+    t.includes("renk seçeneği")
+  ) {
+    return "ASK_COLOR";
+  }
+
+  // Beden / numara
+  if (
+    t.includes("beden") ||
+    t.includes("numara") ||
+    t.includes("kac beden") ||
+    t.includes("kaç beden") ||
+    t.includes("36 olur mu") ||
+    t.includes("small") ||
+    t.includes("medium") ||
+    t.includes("large") ||
+    t.includes("xl") ||
+    t.includes("xs")
+  ) {
+    return "ASK_SIZE";
+  }
+
+  // Malzeme / kalite
+  if (
+    t.includes("malzeme") ||
+    t.includes("kumastan") ||
+    t.includes("kumaştan") ||
+    t.includes("icerik") ||
+    t.includes("içerik") ||
+    t.includes("kalite") ||
+    t.includes("dayanikli") ||
+    t.includes("dayanıklı") ||
+    t.includes("sağlam mı") ||
+    t.includes("saglam mi")
+  ) {
+    return "ASK_MATERIAL";
+  }
+
+  // Kullanım amacı / nerede kullanılır
+  if (
+    t.includes("ne icin kullanilir") ||
+    t.includes("ne için kullanılır") ||
+    t.includes("nerede kullanilir") ||
+    t.includes("nerede kullanılır") ||
+    t.includes("kullanim amaci") ||
+    t.includes("kullanım amacı") ||
+    t.includes("ofis icin uygun mu") ||
+    t.includes("gunluk icin uygun mu") ||
+    t.includes("günlük için uygun mu")
+  ) {
+    return "ASK_USAGE";
+  }
+
+  // Uygunluk (koşu, deniz, dış mekan vs.)
+  if (
+    t.includes("kosu icin") ||
+    t.includes("koşu için") ||
+    t.includes("denizde kullanilir mi") ||
+    t.includes("denizde kullanılır mı") ||
+    t.includes("uygun mu") ||
+    t.includes("uyar mi") ||
+    t.includes("uyar mı") ||
+    t.includes("uygun olur mu") ||
+    t.includes("kışın giyilir mi") ||
+    t.includes("kis icin uygun mu")
+  ) {
+    return "ASK_SUITABILITY";
+  }
+
+  // Öneri / tavsiye
+  if (
+    t.includes("oneri") ||
+    t.includes("öneri") ||
+    t.includes("ne önerirsin") ||
+    t.includes("hangi urunu") ||
+    t.includes("hangi ürünü") ||
+    t.includes("bana bir sey öner") ||
+    t.includes("bana bir şey öner") ||
+    t.includes("hangisini alayim") ||
+    t.includes("hangisini alayım") ||
+    t.includes("bana üç tane öner") ||
+    t.includes("bana uc tane oner")
+  ) {
+    return "ASK_RECOMMENDATION";
+  }
+
+  // Kombin / neyle gider
+  if (
+    t.includes("kombin") ||
+    t.includes("yanina ne gider") ||
+    t.includes("yanına ne gider") ||
+    t.includes("neyle giyilir") ||
+    t.includes("neyle kullanilir") ||
+    t.includes("takim yap") ||
+    t.includes("takım yap") ||
+    t.includes("üstüne ne giyilir") ||
+    t.includes("ustune ne giyilir")
+  ) {
+    return "ASK_COMBINATION";
+  }
+
+  // Kargo / teslimat
+  if (
+    t.includes("kargo") ||
+    t.includes("teslimat") ||
+    t.includes("kac gunde gelir") ||
+    t.includes("kaç günde gelir") ||
+    t.includes("ne zaman gelir") ||
+    t.includes("kargo ucreti") ||
+    t.includes("kargo ücreti")
+  ) {
+    return "ASK_SHIPPING";
+  }
+
+  // İade / değişim
+  if (
+    t.includes("iade") ||
+    t.includes("degisim") ||
+    t.includes("değişim") ||
+    t.includes("geri gonder") ||
+    t.includes("geri gönder") ||
+    t.includes("degistirebilir miyim") ||
+    t.includes("değiştirebilir miyim")
+  ) {
+    return "ASK_RETURN";
+  }
+
+  // Kargo takibi
+  if (
+    t.includes("kargom nerede") ||
+    t.includes("kargo nerede") ||
+    t.includes("siparisim nerede") ||
+    t.includes("siparişim nerede") ||
+    t.includes("takip numarasi") ||
+    t.includes("takip numarası") ||
+    t.includes("sürat kargo") ||
+    t.includes("aras kargo") ||
+    t.includes("ptt kargo")
+  ) {
+    return "TRACK_ORDER";
+  }
+
+  // Şikayet
+  if (
+    t.includes("sikayet") ||
+    t.includes("şikayet") ||
+    t.includes("memnun degil") ||
+    t.includes("memnun değil") ||
+    t.includes("cok kotu") ||
+    t.includes("çok kötü") ||
+    t.includes("hayal kirikligi") ||
+    t.includes("hayal kırıklığı") ||
+    t.includes("berbat") ||
+    t.includes("rezalet")
+  ) {
+    return "COMPLAINT";
+  }
 
   return "UNKNOWN";
 }
-
+/**
+ * Kullanıcı mesajından ürün adına benzeyen kelimeleri çıkarır
+ */
 function findMatchingProducts(msg: string, products: Product[]): Product[] {
-  const t = normalizeText(msg);
-  const words = t.split(" ");
+  const normMsg = normalizeText(msg);
 
-  return products.filter((p) =>
-    normalizeText(p.title).includes(words[0])
-  ).slice(0, 5);
+  const tokens = normMsg
+    .split(" ")
+    .filter(
+      (t) => t.length > 2 && !["ve", "için", "gibi", "bir", "ile"].includes(t)
+    );
+
+  if (!tokens.length) return [];
+
+  const scored: { product: Product; score: number }[] = [];
+
+  for (const product of products) {
+    const titleNorm = normalizeText(product.title);
+
+    let score = 0;
+    for (const token of tokens) {
+      if (titleNorm.includes(token)) score += 2;
+    }
+
+    if (score > 0) scored.push({ product, score });
+  }
+
+  scored.sort((a, b) => b.score - a.score);
+
+  return scored.slice(0, 4).map((s) => s.product);
 }
+
+/**
+ * Ürün sunum formatı
+ */
 function formatProductSummary(p: Product): string {
   const lines: string[] = [];
 
   lines.push(`✨ **${p.title}**`);
 
   if (p.price) lines.push(`💰 Fiyat: ${p.price}`);
-  else lines.push(`💰 Fiyat: Ürün sayfasında güncel görünebilir`);
+  else lines.push("💰 Fiyat: Platformda güncel fiyat yazmaktadır");
 
-  if ((p as any).imageUrl) lines.push(`🖼️ Görsel: ${(p as any).imageUrl}`);
-  else if ((p as any).image) lines.push(`🖼️ Görsel: ${(p as any).image}`);
+  if ((p as any).image || (p as any).imageUrl) {
+    lines.push(
+      `🖼️ Görsel: ${(p as any).image || (p as any).imageUrl}`
+    );
+  }
 
   if (p.category) lines.push(`📂 Kategori: ${p.category}`);
+  if (p.color) lines.push(`🎨 Renk: ${p.color}`);
   if (p.url) lines.push(`🔗 Link: ${p.url}`);
-
-  // Yeni ekleme → Fiyat segment yorumu
-  const seg = detectPriceSegment(p.price);
-  if (seg === "LOW") lines.push("💸 Uygun fiyatlı ekonomik bir model 👍");
-  if (seg === "MID") lines.push("💳 Fiyat / performans olarak dengeli bir ürün 👌");
-  if (seg === "HIGH") lines.push("💎 Kalite segmentinde bir ürün 🌟");
 
   return lines.join("\n");
 }
 
-function buildCombinationSuggestion(mainProduct: Product, allProducts: Product[]): string {
-  const p = mainProduct;
+/**
+ * Otomatik malzeme / kalite tahmini
+ */
+function usageAndQualityComment(product: Product): string {
+  const name = product.title.toLowerCase();
+  const comments: string[] = [];
 
-  const norm = (t: string | undefined) => normalizeText(t || "");
+  // 💡 otomatik fikir üretme
+  if (name.includes("deri") || name.includes("leather")) {
+    comments.push("🧵 Malzeme olarak oldukça dayanıklı bir yapısı var.");
+  }
 
-  const others = allProducts.filter(x => x.id !== p.id);
+  if (name.includes("polar") || name.includes("kadife")) {
+    comments.push("🧵 Yumuşak ve sıcak tutan bir dokuya sahip görünüyor.");
+  }
 
-  let result = "🧩 Şu ürünle kombin edebilirsin:\n";
+  if (name.includes("spor") || name.includes("running")) {
+    comments.push("🏃 Hareketli kullanımda rahatlık sağlar.");
+  }
 
-  if (p.category === "giyim") {
-    const shoes = others.find(x => normalizeText(x.title).includes("ayakkabı"));
-    const pant = others.find(x => normalizeText(x.title).includes("pantolon"));
+  if (name.includes("bot") || name.includes("kış") || name.includes("neopren")) {
+    comments.push("❄️ Soğuk havalar için oldukça uygun gözüküyor.");
+  }
 
-    if (pant) {
-      result += `\n👖 Alt kombin:\n${formatProductSummary(pant)}\n`;
-    }
-    if (shoes) {
-      result += `\n👟 Ayakkabı önerisi:\n${formatProductSummary(shoes)}\n`;
+  if (name.includes("pamuk") || name.includes("cotton")) {
+    comments.push("🧵 Cildi tahriş etmeyen, nefes alan bir yapısı var.");
+  }
+
+  if (name.includes("su geçirmez") || name.includes("waterproof")) {
+    comments.push("💧 Yağmur ve dış ortam için ideal bir seçenek.");
+
+  }
+
+  // kategori bazlı özel yorum
+  switch (product.category) {
+    case "elektronik":
+      comments.push("⚙️ Teknik özellikleri kullanım performansını etkiler.");
+      comments.push("🔌 Uyumlu aksesuarlarla daha verimli olur (kılıf, şarj adaptörü vb.)");
+      break;
+
+    case "ayakkabı":
+      comments.push("📌 Doğru numarayı seçmek konfor için önemli.");
+      comments.push("🎯 Günlük kullanımda konforlu duruyor.");
+      break;
+
+    case "kamp-outdoor":
+      comments.push("🏕️ Dış mekan dayanıklılığı önemlidir.");
+      comments.push("🌧️ Su geçirmezlik seviyesine bakmanı öneririm.");
+      break;
+
+    case "oyuncak":
+      comments.push("🧸 Motor becerilere katkı sağlayabilir.");
+      comments.push("📌 Yaş grubuna uygunluk önemli.");
+      break;
+
+    case "hırdavat":
+      comments.push("🛠️ Montaj ve tamir işlerinde pratik kullanım sunabilir.");
+      comments.push("🦺 Güvenlik ekipmanlarıyla kullanılması önerilir.");
+      break;
+
+    case "spor":
+      comments.push("💪 Egzersiz için ideal bir ürün izlenimi veriyor.");
+      comments.push("📌 Düzenli kullanım performansı artırabilir.");
+      break;
+
+    default:
+      comments.push("ℹ️ Günlük kullanım için uygun görünüyor.");
+      break;
+  }
+
+  return comments.join("\n");
+}
+/**
+ * Kullanıcının verdiği absürt fikirleri yakalar
+ * ve uygun olmayan önerileri reddeder
+ */
+function rejectAbsurdIdeas(message: string): string | null {
+  const t = normalizeText(message);
+
+  // Bazı örnekler:
+  const absurdCombos = [
+    "terlikle kaban",
+    "botla kırmızı çorap",
+    "montla sandalet",
+    "sandalet ile kaban",
+    "kalın bot ile şort",
+    "kazakla mayo",
+    "ceketle terlik"
+  ];
+
+  for (const combo of absurdCombos) {
+    if (t.includes(normalizeText(combo))) {
+      return `Bence bu kombin çok dengeli durmaz 😅  
+Daha uyumlu bir seçim yapalım mı?  
+İstersen ürün önerisi yapayım 👍`;
     }
   }
 
-  if (p.category === "elektronik") {
-    const cable = others.find(x =>
-      norm(x.title).includes("sarj") || norm(x.title).includes("kablosuz")
-    );
-
-    const case_ = others.find(x =>
-      norm(x.title).includes("kılıf")
-    );
-
-    if (cable) result += `\n🔌 Tamamlayıcı ürün:\n${formatProductSummary(cable)}`;
-    if (case_) result += `\n📱 Aksesuar önerisi:\n${formatProductSummary(case_)}`;
-  }
-
-  return result;
+  return null;
 }
 
-function buildReplyForIntent(
+
+/**
+ * Kullanıcıya ek sorular sorarak konuşmayı geliştirme
+ */
+function buildFollowUpQuestions(userMessage: string, category: string): string {
+  const t = normalizeText(userMessage);
+
+  // Açıkça aydınlatma ürünü
+  if (t.includes("lamba") || t.includes("avize") || t.includes("aydınlatma")) {
+    return `
+🔍 Daha doğru öneri yapabilmem için:
+- Nerede kullanacaksın? (salon, mutfak, yatak odası)
+- Işık rengi tercihin var mı? (gün ışığı, loş, beyaz)
+- Enerji tasarrufu senin için önemli mi?`;
+  }
+
+  // Bilgisayar toplama ya da PC sorusu
+  if (t.includes("bilgisayar") || t.includes("ekran kartı") || t.includes("ram")) {
+    return `
+🖥️ Sana en uygun sistemi önermem için:
+- Ağırlıklı kullanım ne? (oyun/ofis/tasarım)
+- Ekran kartı tercihin var mı?
+- Yaklaşık bütçen nedir?`;
+  }
+
+  // Kombin isteği varsa
+  if (category === "giyim" || category === "ayakkabı") {
+    return `
+💬 Sana özel kombin çıkarabilirim:
+- Günlük mi yoksa özel bir gün için mi?
+- Daha spor mu, klasik mi seviyorsun?
+- Renk tercihin var mı?`;
+  }
+
+  return "";
+}
+
+
+/**
+ * Ürün kategorisine göre kombin / tamamlayıcı ürün öneren sistem
+ */
+function buildCombinationSuggestion(mainProduct: Product, allProducts: Product[]): string {
+  const cat = mainProduct.category || "genel";
+  const norm = (v: string) => normalizeText(v || "");
+
+  const suggestions: string[] = [];
+  suggestions.push("🧩 Sana birkaç uyumlu öneri hazırladım:");
+
+  // Kombin sistemini geniş kategori bazlı yaptık
+  if (cat === "giyim") {
+    suggestions.push("\n🧥 Üst–Alt kombin:");
+    const pants = allProducts.find(p => norm(p.title).includes("pantolon") || norm(p.title).includes("etek"));
+    if (pants) suggestions.push(formatProductSummary(pants));
+
+    const shoes = allProducts.find(p => norm(p.title).includes("ayakkabı") || norm(p.title).includes("bot"));
+    if (shoes) {
+      suggestions.push("\n👟 Uyumlu ayakkabı:");
+      suggestions.push(formatProductSummary(shoes));
+    }
+
+    suggestions.push("\n💡 Renk uyumu açısından ton yakınlığı daha hoş olur.");
+  }
+
+  else if (cat.includes("ayakkabi") || cat.includes("ayakkabı") || cat.includes("bot")) {
+    suggestions.push("\n👖 Bu ayakkabıyla iyi gidebilecek ürün:");
+    const match = allProducts.find(p => norm(p.title).includes("pantolon") || norm(p.title).includes("kot"));
+    if (match) suggestions.push(formatProductSummary(match));
+
+    suggestions.push("\n💡 Slim fit kesimler ayakkabıyı daha şık gösterir.");
+  }
+
+  else if (cat === "elektronik") {
+    suggestions.push("\n🔌 Tamamlayıcı aksesuar önerileri:");
+
+    const accessories = allProducts.find(p =>
+      norm(p.title).includes("kılıf") ||
+      norm(p.title).includes("powerbank") ||
+      norm(p.title).includes("kulaklık")
+    );
+
+    if (accessories) suggestions.push(formatProductSummary(accessories));
+
+    suggestions.push("\n💡 Teknik aksesuarlar performans artışı sağlar.");
+  }
+
+  else if (cat === "hırdavat") {
+    suggestions.push("\n🛠️ Uyumlu bir ürün önerisi:");
+
+    const gloves = allProducts.find(p => norm(p.title).includes("eldiven"));
+    if (gloves) suggestions.push(formatProductSummary(gloves));
+
+    suggestions.push("\n💡 Güvenlik ekipmanları ile kullanmanı öneririm.");
+  }
+
+  else if (cat.includes("kamp")) {
+    suggestions.push("\n🏕️ Kamp ekipmanı önerisi:");
+
+    const mat = allProducts.find(p => norm(p.title).includes("mat"));
+    if (mat) suggestions.push(formatProductSummary(mat));
+
+    suggestions.push("\n💡 Su geçirmeme & izolasyon kritik.");
+  }
+
+  else {
+    suggestions.push("\n🔗 Tamamlayıcı ürün önerisi:");
+
+    const alt = allProducts.find(p => p.id !== mainProduct.id);
+    if (alt) suggestions.push(formatProductSummary(alt));
+  }
+
+  return suggestions.join("\n");
+}
+/**
+ * Kullanıcının satın alma niyetini analiz eder
+ * HIGH: alacak gibi → net öneri
+ * MID: düşünüyor → ikna yaklaşımı
+ * LOW: sadece sohbet/ilgilenen
+ */
+function detectPurchaseIntent(message: string): "HIGH" | "MID" | "LOW" {
+  const t = normalizeText(message);
+
+  if (
+    t.includes("alıcam") ||
+    t.includes("satın alacağım") ||
+    t.includes("sepete atıyorum") ||
+    t.includes("bu iş tamam") ||
+    t.includes("sipariş veriyorum")
+  ) {
+    return "HIGH";
+  }
+
+  if (
+    t.includes("bakarım") ||
+    t.includes("düşünüyorum") ||
+    t.includes("kararsızım") ||
+    t.includes("emin değilim")
+  ) {
+    return "MID";
+  }
+
+  return "LOW";
+}
+
+
+/**
+ * “Hangisini almalıyım?”, “En mantıklısı hangisi?” gibi soruları çözer
+ */
+function smartProductDecision(products: Product[]): string {
+  if (!products.length) return "Net bir ürün bulamadım 😅";
+
+  if (products.length === 1) {
+    return `Bence mantıklı seçim bu olur:\n\n${formatProductSummary(products[0])}`;
+  }
+
+  // Eğer 2 ürün varsa tek tek avantaj yaz
+  if (products.length === 2) {
+    const p1 = products[0];
+    const p2 = products[1];
+
+    return `
+🧠 İkisi arasından seçim yapmak istersen şöyle:
+
+👉 **${p1.title}**
++ Tasarım & kalite açısından daha premium
++ Çoğu kullanıcı tarafından tercih edilmiş görünüyorsa
+
+👉 **${p2.title}**
++ Daha uygun fiyatlı olabilir
++ Günlük kullanım için avantajlı olabilir
+
+Bence uzun vadede **${p1.title}** daha iyi seçim olabilir 😉`;
+  }
+
+  // 3 ten fazlaysa tek net öneri sun
+  const top = products[0];
+
+  return `
+Epey seçenek var ama benim fikrim:
+⭐ **En mantıklı tercih bu ürün olur:**
+${formatProductSummary(top)}
+
+Daha az riskli, daha dengeli ve fiyat/performans açısından güçlü 👍`;
+}
+
+
+/**
+ * İsme göre hitap şekli
+ * Örn: Ayla → Ayla Hanım
+ * Burak → Burak Bey
+ */
+function formatCustomerName(name: string | null): string {
+  if (!name) return "";
+  const lower = name.toLowerCase();
+  const honor =
+    lower.endsWith("a") ||
+    lower.endsWith("e") ||
+    lower.endsWith("ı") ||
+    lower.endsWith("i") ||
+    lower.endsWith("u") ||
+    lower.endsWith("ü")
+      ? "Hanım"
+      : "Bey";
+
+  return `${name} ${honor}`;
+}
+
+
+/**
+ * Daha net, akıllı yanıt oluşturma helper’ı
+ */
+function buildIntentAwareLine(intent: "HIGH" | "MID" | "LOW"): string {
+  if (intent === "HIGH") {
+    return "\nBu arada, dilersen sana hemen en uygun seçimi net şekilde söyleyebilirim 👍";
+  }
+
+  if (intent === "MID") {
+    return "\nKararsızsan sorun değil, sana ürünlerin artı–eksi yönlerini de açıklayabilirim.";
+  }
+
+  return "\nİstersen sadece bakınabilir, istediğinde soru sorabilirsin 😊";
+}
+/**
+ * Kullanıcı duygu durumunu analiz eder ve etkileşime göre ton belirler
+ */
+function detectSentiment(message: string): "NEGATIVE" | "POSITIVE" | "NEUTRAL" {
+  const t = normalizeText(message);
+
+  // NEGATIVE
+  if (
+    t.includes("çok kötü") ||
+    t.includes("berbat") ||
+    t.includes("hiç beğenmedim") ||
+    t.includes("rezalet") ||
+    t.includes("sinirlendim") ||
+    t.includes("pişman oldum") ||
+    t.includes("mutsuzum") ||
+    t.includes("canım sıkıldı")
+  ) {
+    return "NEGATIVE";
+  }
+
+  // POSITIVE
+  if (
+    t.includes("harika") ||
+    t.includes("bayıldım") ||
+    t.includes("çok iyi") ||
+    t.includes("mükemmel") ||
+    t.includes("süper")
+  ) {
+    return "POSITIVE";
+  }
+
+  return "NEUTRAL";
+}
+
+
+/**
+ * Kullanıcının duygusuna göre yanıt tonunu şekillendirir
+ */
+function sentimentTone(sentiment: string): string {
+  if (sentiment === "NEGATIVE") {
+    return "\nAnladım 😔 Bu konuda yanında olmak isterim. İstersen beraber daha iyi bir alternatif bulalım.";
+  }
+
+  if (sentiment === "POSITIVE") {
+    return "\nHarikaaa! 😍 Böyle sevmen beni mutlu etti, istersen biraz daha benzer ürün önerebilirim.";
+  }
+
+  return "";
+}
+
+
+/**
+ * Ürün kötü ihtimali varsa dürüst ama yapıcı dönüş sağlar
+ */
+function buildHonestOpinion(p: Product): string {
+  const t = normalizeText(p.title);
+
+  if (t.includes("no name") || t.includes("plastik") || t.includes("eski model")) {
+    return (
+      "\n👀 Dürüst olayım; üründe kalite olarak ufak soru işaretleri olabilir." +
+      "\nİstersen fiyat-performans açısından biraz daha güçlü ürünlere bakalım 👍"
+    );
+  }
+
+  if (p.price && parseFloat(p.price) > 15000) {
+    return "\n💰 Fiyat biraz yüksek, ama uzun ömürlü kullanım için mantıklı olabilir.";
+  }
+
+  return "";
+}
+
+
+/**
+ * Kullanıcı agresif veya sert konuşursa sakinleştiren yanıt üretir
+ */
+function calmResponse(message: string): string | null {
+  const t = normalizeText(message);
+
+  if (
+    t.includes("rezalet") ||
+    t.includes("çok kötü hizmet") ||
+    t.includes("nefret ettim") ||
+    t.includes("aptal bot")
+  ) {
+    return (
+      "Böyle hissetmene gerçekten üzüldüm 😞 " +
+      "Amacım yardımcı olmak. Ne yaşadığını biraz anlatırsan senin adına çözelim 🙏"
+    );
+  }
+
+  return null;
+}
+
+
+/**
+ * Kullanıcı ilgi bekliyorsa biraz daha sosyal yanıt üretme
+ */
+function empathyLine(message: string): string | null {
+  const t = normalizeText(message);
+
+  if (t.includes("sıkıldım")) {
+    return "İstersen birlikte biraz gezinelim 😊 Güzel ürünler gösterebilirim.";
+  }
+
+  if (t.includes("kararsızım") || t.includes("emin değilim")) {
+    return "Kararsız olman çok normal 😊 Beraber netleştirelim, sorun değil.";
+  }
+
+  return null;
+}
+/**
+ * Kullanıcının tercihlerini akılda tutma
+ * (kalıcı değil — konuşma bazlı hafıza)
+ */
+let userPreferences: {
+  size?: string;
+  color?: string;
+  budget?: string;
+  category?: string;
+} = {};
+
+
+/**
+ * Kullanıcının cevabından tercih çıkarır
+ */
+function extractPreferences(message: string) {
+  const t = normalizeText(message);
+
+  if (t.includes("40") || t.includes("41") || t.includes("42") || t.includes("43")) {
+    userPreferences.size = message;
+  }
+
+  if (t.includes("siyah") || t.includes("kırmızı") || t.includes("beyaz")) {
+    userPreferences.color = message;
+  }
+
+  if (t.includes("300 tl") || t.includes("500 tl")) {
+    userPreferences.budget = message;
+  }
+
+  if (t.includes("bot") || t.includes("spor ayakkabı") || t.includes("hırdavat")) {
+    userPreferences.category = message;
+  }
+}
+
+
+/**
+ * Kullanıcı geçmişini ve tercihlerini kullanarak öneri üretme
+ */
+function smartRecommendation(
+  products: Product[],
+  message: string
+): string | null {
+  extractPreferences(message);
+
+  const matches: Product[] = [];
+
+  for (const p of products) {
+    const title = normalizeText(p.title);
+
+    if (userPreferences.color && title.includes(userPreferences.color.split(" ")[0])) {
+      matches.push(p);
+    }
+
+    if (userPreferences.category && title.includes(userPreferences.category.split(" ")[0])) {
+      matches.push(p);
+    }
+  }
+
+  if (matches.length > 0) {
+    return (
+      "Senin önceki tercihlerini baz alarak şunlar tam sana uygun görünüyor 😌\n\n" +
+      matches.slice(0, 3).map(formatProductSummary).join("\n\n") +
+      "\n\nDilersen sepete eklemeden önce beden ya da renk teyidi isteyebilirsin."
+    );
+  }
+
+  return null;
+}
+
+
+/**
+ * Tek ürün yerine “mantık yürüten” cevap
+ */
+function logicBasedResponse(
   intent: Intent,
-  userMessage: string,
+  message: string,
+  products: Product[]
+): string | null {
+  const t = normalizeText(message);
+
+  // Kullanıcı fiyat odaklı ise:
+  if (intent === "ASK_PRICE" && t.includes("hangisi mantıklı")) {
+    const sorted = [...products].sort((a, b) => {
+      const pa = parseFloat(a.price || "0");
+      const pb = parseFloat(b.price || "0");
+      return pa - pb; // ucuzdan pahalıya
+    });
+
+    const cheapest = sorted[0];
+    const mid = sorted[Math.floor(sorted.length / 2)];
+    const expensive = sorted[sorted.length - 1];
+
+    return (
+      "Senin için üç bütçede seçenek hazırladım 👇\n\n" +
+      "💸 Ekonomik seçenek:\n" +
+      formatProductSummary(cheapest) +
+      "\n\n💛 Dengeli fiyat/performans:\n" +
+      formatProductSummary(mid) +
+      "\n\n🔥 Premium yüksek kalite:\n" +
+      formatProductSummary(expensive) +
+      "\n\nBütçeni yazarsan sana en uygun olanı netleştirelim 😊"
+    );
+  }
+
+  // Kullanıcı sadece "öner" dediyse ama niyet yoksa
+  if (intent === "ASK_RECOMMENDATION") {
+    const general = smartRecommendation(products, message);
+    if (general) return general;
+  }
+
+  return null;
+}
+
+
+/**
+ * Kullanıcıyı satın almaya yönlendiren cümleler
+ */
+function persuasiveEnding(purchaseIntent: "LOW" | "MID" | "HIGH"): string {
+  if (purchaseIntent === "HIGH") {
+    return "\n⭐ Dilersen hemen sipariş adımına geçebilirsin, stok tükenmeden almak iyi olur.";
+  }
+
+  if (purchaseIntent === "MID") {
+    return "\n💡 Bence bugün değerlendirmen iyi olur, fiyatlar değişebiliyor.";
+  }
+
+  return "\nİstersen benzer ürünleri de gösterebilirim 😊";
+}
+
+
+/**
+ * Tüm sistemi bağlayan ve nihai akıllı cevap üretimini yapan yapı
+ */
+export function buildFullSmartResponse(
+  intent: Intent,
+  message: string,
   products: Product[],
   customerName: string | null
 ): string {
+  const sentiment = detectSentiment(message);
+  const moodTone = sentimentTone(sentiment);
 
-  if (customerName) knownCustomerName = customerName;
+  const calm = calmResponse(message);
+  if (calm) return calm;
 
-  const matches = findMatchingProducts(userMessage, products);
-  const mainProduct = matches[0] || products[0];
-  const category = detectStoreCategory(products);
+  const logic = logicBasedResponse(intent, message, products);
+  if (logic) return logic;
 
-  const absurd = rejectAbsurdIdeas(userMessage);
-  if (absurd) return absurd;
+  const baseResponse = buildReplyForIntent(
+    intent,
+    message,
+    products,
+    customerName
+  );
 
-  const purchaseIntent = detectPurchaseIntent(userMessage);
+  const nameSub = customerName
+    ? `\n${customerName.endsWith("a") || customerName.endsWith("e") ? "Hanım" : "Bey"}`
+    : "";
 
-  // Yeni ekleme → satın alma isteğine göre yaklaşım
-  let emotionalPush = "";
-  if (purchaseIntent === "HIGH")
-    emotionalPush = "\n✨ Bence kaçırma fırsat güzel 👍";
-  if (purchaseIntent === "MID")
-    emotionalPush = "\n👀 İstersen alternatif de söyleyebilirim";
-  if (purchaseIntent === "LOW")
-    emotionalPush = "\n😊 Bakmak istersen detay verebilirim";
+  const persuasion = persuasiveEnding(detectPurchaseIntent(message));
 
-  switch (intent) {
-    case "GREETING":
-      return `Merhaba ${knownCustomerName ?? ""} 👋
-Ben FlowAI. Sana ürün, öneri ve bilgi konusunda yardımcı olabilirim.
-Ne arıyorsun? 😊`;
+  const empathy = empathyLine(message);
 
-    case "SMALL_TALK":
-      return DAILY_TALK_PATTERNS.find(pt => pt.regex.test(userMessage))?.answer
-        || "Buradayım 😊 Ürün bakmak ister misin?";
-        case "ASK_PRICE":
-      return formatProductSummary(mainProduct) + emotionalPush;
+  const main = baseResponse + moodTone + persuasion;
 
-    case "ASK_STOCK":
-      return (
-        formatProductSummary(mainProduct) +
-        "\n📦 Stok bilgisi platform üzerinden anlık güncellenir."
-      );
+  if (empathy) return main + "\n\n" + empathy;
 
-    case "ASK_COLOR":
-      return (
-        formatProductSummary(mainProduct) +
-        "\n🎨 Varyasyon seçenekleri ürün sayfasında yer alır."
-      );
-
-    case "ASK_SIZE":
-      if (category === "giyim" || category === "ayakkabı") {
-        return (
-          formatProductSummary(mainProduct) +
-          "\n📏 Beden seçimi için yorumlara göz atmanı öneririm." +
-          emotionalPush
-        );
-      }
-      return formatProductSummary(mainProduct) + "\n📐 Teknik ölçüler önemlidir.";
-
-    case "ASK_MATERIAL":
-      return (
-        formatProductSummary(mainProduct) +
-        "\n🧵 Malzeme bilgisi ürün detayında listelenmiştir." +
-        emotionalPush
-      );
-
-    case "ASK_USAGE":
-    case "ASK_SUITABILITY":
-      return (
-        formatProductSummary(mainProduct) +
-        "\n🔍 Kullanım amacın neyse ona göre öneride bulunabilirim." +
-        emotionalPush
-      );
-
-    case "ASK_RECOMMENDATION": {
-      const results = matches.length ? matches : products.slice(0, 3);
-
-      return (
-        "Sana özel ürünler önerebilirim 🌟\n\n" +
-        results
-          .slice(0, 3)
-          .map((p, idx) => `#${idx + 1}\n${formatProductSummary(p)}\n`)
-          .join("\n") +
-        "\nBeğenirsen buna uygun kombin de önerebilirim 😊"
-      );
-    }
-
-    case "ASK_COMBINATION":
-      return buildCombinationSuggestion(mainProduct, products);
-
-    case "ASK_SHIPPING":
-      return (
-        "🚚 Kargo bilgisi\n\n" +
-        "- Çoğu ürün 1-3 iş günü içinde kargoya teslim edilir.\n" +
-        "- Kesin teslim tarihini sipariş panelinden görebilirsin.\n"
-      );
-
-    case "ASK_RETURN":
-      return (
-        "🔄 İade & Değişim\n\n" +
-        "İade koşulları satın alma yapılan platforma göre değişebilir.\n" +
-        "Genelde kutusu ve içeriği tam olduğunda 14 gün içinde iade hakkın bulunur 😊"
-      );
-
-    case "TRACK_ORDER":
-      return (
-        "📦 Kargon nerede?\n\n" +
-        "Sipariş verdiğin platformdaki 'Siparişlerim' sayfasından takip numarasını görebilirsin.\n"
-      );
-
-    case "COMPLAINT":
-      return (
-        "Üzgünüm bunu yaşaman hiç hoş olmamış 😞\n" +
-        "Sorunu detaylı yaz, yardımcı olmaya çalışayım.\n"
-      );
-
-    case "UNKNOWN":
-    default:
-      return (
-        formatProductSummary(mainProduct) +
-        "\nTam olarak ne öğrenmek istiyorsun? (fiyat, beden, kullanım, kombin vb.)"
-      );
-  }
-}
-
-/**
- * Ana çalışma fonksiyonu
- */
-export async function generateSmartReply(
-  shopId: string,
-  userMessage: string
-): Promise<string> {
-  const trimmed = (userMessage || "").trim();
-  const name = extractCustomerName(trimmed);
-  const products = await getProductsForShop(shopId);
-  const intent = detectIntent(trimmed);
-
-  return buildReplyForIntent(intent, trimmed, products, name);
-}
-
-export async function getAssistantReply(shopId: string, userMessage: string) {
-  return generateSmartReply(shopId, userMessage);
-}
-
-export async function getAIResponse(shopId: string, userMessage: string) {
-  return generateSmartReply(shopId, userMessage);
+  return main;
 }
