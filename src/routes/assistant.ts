@@ -1,5 +1,6 @@
 import express from "express";
-import { getAIResponse } from "../services/assistantService.js";
+import { db } from "../config/firebase-admin.js";
+
 
 const router = express.Router();
 
