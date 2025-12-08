@@ -187,183 +187,49 @@ function detectStoreCategory(products) {
  */
 function detectIntent(msg) {
     const t = normalizeText(msg);
-    // SMALL TALK – önce genel sohbet
-    if (t.includes("nasilsin") ||
-        t.includes("naber") ||
-        t.includes("napıyorsun") ||
-        t.includes("ne yapiyorsun") ||
-        t.includes("bot musun") ||
-        t.includes("yapay zeka") ||
-        t.includes("gercek misin") ||
-        t.includes("gerçek misin")) {
+    // günlük konuşmalar
+    if (/(nasılsın|nasilsin|napıyorsun|ne yapıyorsun)/i.test(msg))
         return "SMALL_TALK";
-    }
-    // Selamlaşma
-    if (t.includes("merhaba") ||
-        t.includes("selam") ||
-        t.includes("slm") ||
-        t.includes("iyi gunler") ||
-        t.includes("iyi günler") ||
-        t.includes("günaydın") ||
-        t.includes("gunaydin") ||
-        t.includes("iyi aksamlar") ||
-        t.includes("iyi akşamlar")) {
-        return "GREETING";
-    }
-    // Fiyat soruları
-    if (t.includes("fiyat") ||
-        t.includes("kaca") ||
-        t.includes("kaça") ||
-        t.includes("ne kadar") ||
-        t.includes("ucret") ||
-        t.includes("ücret") ||
-        t.includes("kaç tl") ||
-        t.includes("kac tl")) {
-        return "ASK_PRICE";
-    }
-    // Stok soruları
-    if (t.includes("stok") ||
-        t.includes("var mi") ||
-        t.includes("varmı") ||
-        t.includes("kalmis mi") ||
-        t.includes("kalmış mı") ||
-        t.includes("tukendi mi") ||
-        t.includes("tükendi mi") ||
-        t.includes("yeniden gelir mi") ||
-        t.includes("tekrar gelir mi")) {
-        return "ASK_STOCK";
-    }
-    // Renk soruları
-    if (t.includes("renk") ||
-        t.includes("baska renk") ||
-        t.includes("başka renk") ||
-        t.includes("hangi renk") ||
-        t.includes("renk secenegi") ||
-        t.includes("renk seçeneği")) {
-        return "ASK_COLOR";
-    }
-    // Beden / numara
-    if (t.includes("beden") ||
-        t.includes("numara") ||
-        t.includes("kac beden") ||
-        t.includes("kaç beden") ||
-        t.includes("36 olur mu") ||
-        t.includes("small") ||
-        t.includes("medium") ||
-        t.includes("large") ||
-        t.includes("xl") ||
-        t.includes("xs")) {
-        return "ASK_SIZE";
-    }
-    // Malzeme / kalite
-    if (t.includes("malzeme") ||
-        t.includes("kumastan") ||
-        t.includes("kumaştan") ||
-        t.includes("icerik") ||
-        t.includes("içerik") ||
-        t.includes("kalite") ||
-        t.includes("dayanikli") ||
-        t.includes("dayanıklı") ||
-        t.includes("sağlam mı") ||
-        t.includes("saglam mi")) {
-        return "ASK_MATERIAL";
-    }
-    // Kullanım amacı / nerede kullanılır
-    if (t.includes("ne icin kullanilir") ||
-        t.includes("ne için kullanılır") ||
-        t.includes("nerede kullanilir") ||
-        t.includes("nerede kullanılır") ||
-        t.includes("kullanim amaci") ||
-        t.includes("kullanım amacı") ||
-        t.includes("ofis icin uygun mu") ||
-        t.includes("gunluk icin uygun mu") ||
-        t.includes("günlük için uygun mu")) {
-        return "ASK_USAGE";
-    }
-    // Uygunluk (koşu, deniz, dış mekan vs.)
-    if (t.includes("kosu icin") ||
-        t.includes("koşu için") ||
-        t.includes("denizde kullanilir mi") ||
-        t.includes("denizde kullanılır mı") ||
-        t.includes("uygun mu") ||
-        t.includes("uyar mi") ||
-        t.includes("uyar mı") ||
-        t.includes("uygun olur mu") ||
-        t.includes("kışın giyilir mi") ||
-        t.includes("kis icin uygun mu")) {
-        return "ASK_SUITABILITY";
-    }
-    // Öneri / tavsiye
-    if (t.includes("oneri") ||
-        t.includes("öneri") ||
-        t.includes("ne önerirsin") ||
-        t.includes("hangi urunu") ||
-        t.includes("hangi ürünü") ||
-        t.includes("bana bir sey öner") ||
-        t.includes("bana bir şey öner") ||
-        t.includes("hangisini alayim") ||
-        t.includes("hangisini alayım") ||
-        t.includes("bana üç tane öner") ||
-        t.includes("bana uc tane oner")) {
+    if (/(canım sıkıldı|sıkıldım|modum düşük)/i.test(msg))
+        return "SMALL_TALK";
+    if (/(bot musun|gerçek misin|yapay zeka)/i.test(msg))
+        return "SMALL_TALK";
+    // isim verme
+    if (/benim adım/i.test(msg) || /adım/i.test(msg))
+        return "SMALL_TALK";
+    // satın alma niyeti
+    if (/(sepete attım|sepete ekledim|alayım mı|satın alacağım|sipariş veriyorum)/i.test(msg))
         return "ASK_RECOMMENDATION";
-    }
-    // Kombin / neyle gider
-    if (t.includes("kombin") ||
-        t.includes("yanina ne gider") ||
-        t.includes("yanına ne gider") ||
-        t.includes("neyle giyilir") ||
-        t.includes("neyle kullanilir") ||
-        t.includes("takim yap") ||
-        t.includes("takım yap") ||
-        t.includes("üstüne ne giyilir") ||
-        t.includes("ustune ne giyilir")) {
+    // net tavsiye isteyen
+    if (/(hangisi mantıklı|hangisini alayım|karşılaştır|kıyasla|sen olsan hangisini alırdın)/i.test(msg))
+        return "ASK_RECOMMENDATION";
+    // 3 ürün isterse
+    if (/(3 ürün|üç ürün|bana üç tane öner|öneri ver)/i.test(msg))
+        return "ASK_RECOMMENDATION";
+    if (t.includes("fiyat") || t.includes("kaç lira"))
+        return "ASK_PRICE";
+    if (t.includes("stok") || t.includes("var mı"))
+        return "ASK_STOCK";
+    if (t.includes("renk"))
+        return "ASK_COLOR";
+    if (t.includes("beden") || t.includes("numara"))
+        return "ASK_SIZE";
+    if (t.includes("malzeme") || t.includes("kalite"))
+        return "ASK_MATERIAL";
+    if (t.includes("nerede kullanılır") || t.includes("ne için"))
+        return "ASK_USAGE";
+    if (t.includes("uygun mu"))
+        return "ASK_SUITABILITY";
+    if (t.includes("kombin"))
         return "ASK_COMBINATION";
-    }
-    // Kargo / teslimat
-    if (t.includes("kargo") ||
-        t.includes("teslimat") ||
-        t.includes("kac gunde gelir") ||
-        t.includes("kaç günde gelir") ||
-        t.includes("ne zaman gelir") ||
-        t.includes("kargo ucreti") ||
-        t.includes("kargo ücreti")) {
+    if (t.includes("kargo") || t.includes("ne zaman gelir"))
         return "ASK_SHIPPING";
-    }
-    // İade / değişim
-    if (t.includes("iade") ||
-        t.includes("degisim") ||
-        t.includes("değişim") ||
-        t.includes("geri gonder") ||
-        t.includes("geri gönder") ||
-        t.includes("degistirebilir miyim") ||
-        t.includes("değiştirebilir miyim")) {
+    if (t.includes("iade"))
         return "ASK_RETURN";
-    }
-    // Kargo takibi
-    if (t.includes("kargom nerede") ||
-        t.includes("kargo nerede") ||
-        t.includes("siparisim nerede") ||
-        t.includes("siparişim nerede") ||
-        t.includes("takip numarasi") ||
-        t.includes("takip numarası") ||
-        t.includes("sürat kargo") ||
-        t.includes("aras kargo") ||
-        t.includes("ptt kargo")) {
+    if (t.includes("kargom nerede") || t.includes("sipariş takip"))
         return "TRACK_ORDER";
-    }
-    // Şikayet
-    if (t.includes("sikayet") ||
-        t.includes("şikayet") ||
-        t.includes("memnun degil") ||
-        t.includes("memnun değil") ||
-        t.includes("cok kotu") ||
-        t.includes("çok kötü") ||
-        t.includes("hayal kirikligi") ||
-        t.includes("hayal kırıklığı") ||
-        t.includes("berbat") ||
-        t.includes("rezalet")) {
+    if (t.includes("kötü") || t.includes("şikayet"))
         return "COMPLAINT";
-    }
     return "UNKNOWN";
 }
 /**
