@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { getAIResponse } from "../services/assistantService.js";
+import { getAIResponse } from "../services/assistantService";
 
 const router = Router();
 
-router.get("/", (req, res) => {
-  res.json({ ok: true, message: "Assistant API working" });
-});
+router.get("/", (req, res) =>
+  res.json({ ok: true, message: "Assistant running" })
+);
 
 router.post("/", async (req, res) => {
   const { shopId, message } = req.body;
@@ -13,15 +13,15 @@ router.post("/", async (req, res) => {
   if (!message) {
     return res.status(400).json({
       success: false,
-      error: "Message is required",
+      error: "Message is required"
     });
   }
 
   const reply = await getAIResponse(shopId, message);
 
-  return res.json({
+  res.json({
     success: true,
-    reply,
+    reply
   });
 });
 
