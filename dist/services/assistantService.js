@@ -52,19 +52,23 @@ function rejectAbsurdIdeas(message) {
 /**
  * Müşteri satın alma niyeti tespiti
  */
-function detectPurchaseIntent(msg) {
-    const t = normalizeText(msg);
-    if (t.includes("alacağım") ||
-        t.includes("alayım") ||
-        t.includes("satın") ||
+function detectPurchaseIntent(message) {
+    const t = normalizeText(message);
+    // yüksek niyet
+    if (t.includes("sepete attım") ||
         t.includes("sepete ekledim") ||
-        t.includes("sepete atacağım"))
+        t.includes("alacağım") ||
+        t.includes("satın") ||
+        t.includes("kesin alacağım")) {
         return "HIGH";
-    if (t.includes("bakacağım") ||
-        t.includes("bakayım") ||
-        t.includes("düşünüyorum") ||
-        t.includes("kararsızım"))
+    }
+    // orta niyet
+    if (t.includes("düşünüyorum") ||
+        t.includes("bakarım") ||
+        t.includes("kararsızım") ||
+        t.includes("inceleyeceğim")) {
         return "MID";
+    }
     return "LOW";
 }
 /**
@@ -73,27 +77,27 @@ function detectPurchaseIntent(msg) {
 const DAILY_TALK_PATTERNS = [
     {
         regex: /(nasılsın|nasilsin|napıyorsun|ne yapıyorsun)/i,
-        answer: "İyiyim ve buradayım 😊 Sen nasılsın?",
+        answer: "İyiyim ve buradayım 😊 Sen nasılsın?"
     },
     {
-        regex: /(canım sıkıldı|sıkıldım)/i,
-        answer: "Üzülme 😌 biraz güzel ürünler gösteriyim ister misin?",
+        regex: /(canım sıkıldı|sıkıldım|fenayım)/i,
+        answer: "Moral bozma 😊 İstersen sana güzel ürünler göstereyim, belki modun yükselir!"
     },
     {
-        regex: /(bot musun|yapay zeka misin|gerçek misin)/i,
-        answer: "Ben FlowAI 🤖 Gerçek bir yardımcı değilim ama sana gerçek öneriler veriyorum 😊",
-    },
+        regex: /(bot musun|yapay zeka mısın|gerçek misin)/i,
+        answer: "Ben FlowAI 🤖 Ürün konusunda sana gerçek öneriler vermek için buradayım!"
+    }
 ];
 /**
  * Kullanıcı adını yakalama
  */
-const NAME_PATTERN = /(benim adım|adım|bana)[: ]+([a-zA-ZığüşöçİĞÜŞÖÇ]+)/i;
+const NAME_PATTERN = /(benim adım|adım|ben)[: ]+([a-zA-ZığüşöçİĞÜŞÖÇ]+)/i;
 function extractCustomerName(msg) {
-    const match = msg.match(NAME_PATTERN);
-    if (!match)
+    const m = msg.match(NAME_PATTERN);
+    if (!m)
         return null;
-    const name = match[2];
-    return name.charAt(0).toUpperCase() + name.slice(1).toLowerCase();
+    const raw = m[2];
+    return raw.charAt(0).toUpperCase() + raw.slice(1).toLowerCase();
 }
 let KNOWN_NAME = null;
 /**
