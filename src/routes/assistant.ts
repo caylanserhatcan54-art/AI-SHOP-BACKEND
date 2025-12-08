@@ -1,31 +1,28 @@
 import { Router } from "express";
-import { askAssistant } from "../services/assistantService.js";
+import { getAIResponse } from "../services/assistantService.js";
 
 const router = Router();
 
-// POST /assistant/:shopId
-router.post("/:shopId", async (req, res) => {
-  try {
-    const shopId = req.params.shopId;
-    const userMessage = req.body.message;
+router.get("/", (req, res) => {
+  res.json({ message: "Assistant API is working" });
+});
 
-    if (!userMessage) {
-      return res.status(400).json({ error: "Message is required" });
-    }
+router.post("/", async (req, res) => {
+  const { shopId, message } = req.body;
 
-    const reply = await askAssistant(shopId, userMessage);
-
-    return res.json({
-      success: true,
-      reply,
-    });
-  } catch (error: any) {
-    console.error("Assistant Error:", error);
-    return res.status(500).json({
+  if (!message) {
+    return res.status(400).json({
       success: false,
-      error: error.message || "Something went wrong",
+      error: "Message is required",
     });
   }
+
+  const reply = await getAIResponse(shopId, message);
+
+  res.json({
+    success: true,
+    reply,
+  });
 });
 
 export default router;
