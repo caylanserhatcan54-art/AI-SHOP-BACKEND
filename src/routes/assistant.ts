@@ -1,14 +1,9 @@
-import { Router } from "express";
-import { getAssistantReply } from "../services/assistantService.js";
+import express from "express";
+import { generateSmartReply } from "../services/assistantService.js";
 
-const router = Router();
+const router = express.Router();
 
-// Test endpoint
-router.get("/test", (req, res) => {
-  res.json({ message: "Assistant test endpoint çalışıyor!" });
-});
-
-// POST endpoint
+// POST /api/assistant
 router.post("/", async (req, res) => {
   try {
     const { shopId, msg } = req.body;
@@ -17,11 +12,12 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: "shopId ve msg zorunludur" });
     }
 
-    const reply = await getAssistantReply(shopId, msg);
+    const reply = await generateSmartReply(shopId, msg);
     res.json({ reply });
+
   } catch (err) {
     console.error("Assistant Error:", err);
-    res.status(500).json({ error: "AI cevap üretirken hata oluştu" });
+    res.status(500).json({ error: "Asistan cevap üretemedi" });
   }
 });
 

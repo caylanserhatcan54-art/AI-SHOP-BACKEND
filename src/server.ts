@@ -3,16 +3,21 @@ import cors from "cors";
 import assistantRouter from "./routes/assistant.js";
 
 const app = express();
+
 app.use(cors());
 app.use(express.json());
 
 // health
 app.get("/api/health", (req, res) => {
-  res.send("Backend çalıştı 🚀");
+  res.json({ message: "Backend çalışıyor 🚀" });
 });
 
-// ROUTER BURADA DOĞRU YERDE
+// assistant endpoint
 app.use("/api/assistant", assistantRouter);
 
+// PORT
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log("Server running on port " + PORT));
+
+app.listen(PORT, () => {
+  console.log("Server running on port", PORT);
+});
