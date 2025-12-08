@@ -1,23 +1,27 @@
-import express from "express";
+import { Router } from "express";
 import { getAssistantReply } from "../services/assistantService.js";
 
-const router = express.Router();
+const router = Router();
 
-router.get("/", async (req, res) => {
+// Test endpoint
+router.get("/test", (req, res) => {
+  res.json({ message: "Assistant test endpoint çalışıyor!" });
+});
+
+// POST endpoint
+router.post("/", async (req, res) => {
   try {
-    const shopId = req.query.shopId as string;
-    const message = req.query.message as string;
+    const { shopId, msg } = req.body;
 
-    if (!shopId || !message) {
-      return res.status(400).json({ error: "shopId ve message gerekli" });
+    if (!shopId || !msg) {
+      return res.status(400).json({ error: "shopId ve msg zorunludur" });
     }
 
-    const reply = await getAssistantReply(shopId, message);
-
-    return res.json({ reply });
-  } catch (error) {
-    console.error(error);
-    return res.status(500).json({ error: "Sunucu hatası" });
+    const reply = await getAssistantReply(shopId, msg);
+    res.json({ reply });
+  } catch (err) {
+    console.error("Assistant Error:", err);
+    res.status(500).json({ error: "AI cevap üretirken hata oluştu" });
   }
 });
 
