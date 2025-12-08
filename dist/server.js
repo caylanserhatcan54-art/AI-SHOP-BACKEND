@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import assistantRouter from "./routes/assistant.js";
+import { assistantRouter } from "./routes/assistant.js";
 const app = express();
 app.use(cors());
 app.use(express.json());

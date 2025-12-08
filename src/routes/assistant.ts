@@ -1,24 +1,21 @@
-import express from "express";
-import { generateSmartReply } from "../services/assistantService.js";
+import { Router } from "express";
+import { getAssistantReply } from "../services/assistantService.js"; 
 
-const router = express.Router();
+export const assistantRouter = Router();
 
-// POST /api/assistant
-router.post("/", async (req, res) => {
+assistantRouter.post("/", async (req, res) => {
   try {
     const { shopId, msg } = req.body;
 
     if (!shopId || !msg) {
-      return res.status(400).json({ error: "shopId ve msg zorunludur" });
+      return res.status(400).json({ error: "shopId ve msg gereklidir" });
     }
 
-    const reply = await generateSmartReply(shopId, msg);
-    res.json({ reply });
+    const reply = await getAssistantReply(shopId, msg);
 
+    return res.status(200).json({ reply });
   } catch (err) {
-    console.error("Assistant Error:", err);
-    res.status(500).json({ error: "Asistan cevap üretemedi" });
+    console.error("Assistant ERROR:", err);
+    return res.status(500).json({ error: "Assistant error" });
   }
 });
-
-export default router;
