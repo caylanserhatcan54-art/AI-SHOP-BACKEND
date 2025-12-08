@@ -5,8 +5,11 @@ if (!admin.apps.length) {
 
   admin.initializeApp({
     credential: admin.credential.cert(serviceAccount),
+    storageBucket: process.env.FIREBASE_STORAGE_BUCKET,
   });
 }
 
-export const db = admin.firestore();
-export const auth = admin.auth();
+export const adminSDK = admin;
+export const firestoreAdmin = admin.firestore();
+export const authAdmin = admin.auth();
+export const bucket = admin.storage().bucket();

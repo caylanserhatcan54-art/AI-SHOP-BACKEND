@@ -1,4 +1,5 @@
-import { db } from "../config/firebase-admin.js";
+import { auth } from "../config/firebase";
+
 
 export const getAIResponse = async (storeId: string, message: string) => {
   try {
