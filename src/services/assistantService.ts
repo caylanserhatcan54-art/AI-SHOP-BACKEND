@@ -1,24 +1,20 @@
-import { getProductListByStore, getStoreDetails } from "./dbService.js";
+import { db } from "../config/firebase-admin.js";
 
-export async function getAIResponse(storeId: string, message: string) {
-  const products = await getProductListByStore(storeId);
-  const store = await getStoreDetails(storeId);
+export const getAIResponse = async (storeId: string, message: string) => {
+  try {
+    // fetch products of this shop
+    const productsRef = db.collection("stores").doc(storeId).collection("products");
+    const productsSnap = await productsRef.limit(3).get();
 
-  if (!products.length) {
-    return "Bu mağazada ürün bulunamadı.";
+    if (productsSnap.empty) {
+      return "Şu anda bu mağaza için ürün bulunamadı.";
+    }
+
+    const items = productsSnap.docs.map(d => d.data());
+
+    return `Bunları önerebilirim: ${items.map(p => p.name).join(", ")}`;
+  } catch (err) {
+    console.log("AI ERROR:", err);
+    return "Şu anda yardımcı olamıyorum.";
   }
-
-  // Örnek basit öneri:
-
-  if (message.includes("kazak") || message.includes("tişört")) {
-    const firstItem = products[0];
-
-    return `
-Önerim: ${firstItem.name}
-Fiyatı: ${firstItem.price || "Belirtilmemiş"}
-Ürün Linki: ${firstItem.link || "-"}
-`.trim();
-  }
-
-  return "Sorunu tam anlamadım, ürün ile ilgili tekrar sorabilirsin.";
-}
+};
