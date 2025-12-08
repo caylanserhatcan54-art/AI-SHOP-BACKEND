@@ -1,28 +1,23 @@
-import { Router } from "express";
-import { getAIResponse } from "../services/assistantService";
+import express from "express";
+import { getAssistantReply } from "../services/assistantService.js";
 
-const router = Router();
+const router = express.Router();
 
-router.get("/", (req, res) =>
-  res.json({ ok: true, message: "Assistant running" })
-);
+router.get("/", async (req, res) => {
+  try {
+    const shopId = req.query.shopId as string;
+    const message = req.query.message as string;
 
-router.post("/", async (req, res) => {
-  const { shopId, message } = req.body;
+    if (!shopId || !message) {
+      return res.status(400).json({ error: "shopId ve message gerekli" });
+    }
 
-  if (!message) {
-    return res.status(400).json({
-      success: false,
-      error: "Message is required"
-    });
+    const reply = await getAssistantReply(shopId, message);
+
+    return res.json({ reply });
+  } catch (err) {
+    return res.status(500).json({ error: "Sunucu hatası" });
   }
-
-  const reply = await getAIResponse(shopId, message);
-
-  res.json({
-    success: true,
-    reply
-  });
 });
 
 export default router;

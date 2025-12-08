@@ -1,25 +1,16 @@
-import express from "express";
-import { getAssistantReply } from "../services/assistantService.js";
-
-const router = express.Router();
-
-router.get("/", async (req, res) => {
-  try {
-    const shopId = req.query.shopId as string;
-    const message = req.query.message as string;
-
-    if (!shopId || !message) {
-      return res.status(400).json({ error: "shopId ve message gerekli" });
-    }
-
-    const reply = await getAssistantReply(shopId, message);
-
-    return res.json({
-      reply,
-    });
-  } catch (err) {
-    return res.status(500).json({ error: "Sistem hatası oluştu" });
+export async function getAssistantReply(shopId: string, userMessage: string) {
+  // Basit örnek — sonra geliştirilecek
+  if (userMessage.toLowerCase().includes("hoşgeldin")) {
+    return "Hoş geldiniz 🤝 Mağazamıza göz atabilirsiniz.";
   }
-});
 
-export default router;
+  if (userMessage.toLowerCase().includes("kargo")) {
+    return "Siparişler en geç 2 iş günü içinde kargoya verilir 📦.";
+  }
+
+  if (userMessage.toLowerCase().includes("indirim")) {
+    return "Bu hafta seçili ürünlerde %30 indirim var 🎉";
+  }
+
+  return "Tam olarak anlayamadım ama size yardımcı olmak isterim 😊";
+}

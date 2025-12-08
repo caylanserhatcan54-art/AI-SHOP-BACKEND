@@ -1,18 +1,15 @@
 import express from "express";
-import cors from "cors";
 import assistantRouter from "./routes/assistant.js";
 
 const app = express();
 
-app.use(cors());
 app.use(express.json());
 
 app.get("/", (req, res) => {
-  res.send("FLOW AI Backend is working 🚀");
+  res.send("FlowAI Backend ✔️ Çalışıyor!");
 });
 
-// Yapay zeka endpoint
-app.use("/assistant", aiRouter);
+app.use("/assistant", assistantRouter);
 
-const PORT = process.env.PORT || 8080;
-app.listen(PORT, () => console.log("SERVER LISTENING: " + PORT));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log("Backend çalıştı PORT:", PORT));
