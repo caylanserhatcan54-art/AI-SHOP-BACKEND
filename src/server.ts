@@ -2,7 +2,8 @@ import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
 import aiRouter from "./routes/aiRouter.js";
-import assistantRoutes from "./routes/assistant";
+import assistantRoutes from "./routes/aiRouter.js";
+
 
 
 const app = express();
