@@ -15,7 +15,7 @@ app.get("/", (req, res) => {
 });
 
 // AI ENDPOINT
-app.use("/assistant", aiRouter);
+app.use("/assistant", assistantRoutes);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log("🔥 API is running on " + PORT));

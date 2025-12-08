@@ -4,7 +4,7 @@ import { getAIResponse } from "../services/assistantService.js";
 const router = Router();
 
 router.get("/", (req, res) => {
-  res.json({ message: "Assistant API is working" });
+  res.json({ ok: true, message: "Assistant API working" });
 });
 
 router.post("/", async (req, res) => {
@@ -19,7 +19,7 @@ router.post("/", async (req, res) => {
 
   const reply = await getAIResponse(shopId, message);
 
-  res.json({
+  return res.json({
     success: true,
     reply,
   });
