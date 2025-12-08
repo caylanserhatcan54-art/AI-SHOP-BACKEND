@@ -1,8 +1,8 @@
 import express from "express";
 import cors from "cors";
 import bodyParser from "body-parser";
-import aiRouter from "./routes/aiRouter.js";
-import assistantRoutes from "./routes/assistant.js";
+import aiRouter from "./routes/aiRouter";
+import assistantRoutes from "./routes/assistant";
 
 
 const app = express();
@@ -16,6 +16,7 @@ app.get("/", (req, res) => {
 
 // AI ENDPOINT
 app.use("/assistant", assistantRoutes);
+app.use("/assistant", aiRouter);
 
 const PORT = process.env.PORT || 4000;
 app.listen(PORT, () => console.log("🔥 API is running on " + PORT));
