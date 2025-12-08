@@ -1,27 +1,25 @@
-export async function getAssistantReply(shopId: string, userMessage: string) {
-  userMessage = userMessage.toLowerCase();
+import express from "express";
+import { getAssistantReply } from "../services/assistantService.js";
 
-  // Temel cevap kuralları
-  if (userMessage.includes("merhaba") || userMessage.includes("selam")) {
-    return "Merhaba 👋! Sana nasıl yardımcı olabilirim?";
+const router = express.Router();
+
+router.get("/", async (req, res) => {
+  try {
+    const shopId = req.query.shopId as string;
+    const message = req.query.message as string;
+
+    if (!shopId || !message) {
+      return res.status(400).json({ error: "shopId ve message gerekli" });
+    }
+
+    const reply = await getAssistantReply(shopId, message);
+
+    return res.json({
+      reply,
+    });
+  } catch (err) {
+    return res.status(500).json({ error: "Sistem hatası oluştu" });
   }
+});
 
-  if (userMessage.includes("kargo")) {
-    return "Kargo takip için sipariş numaranızı iletir misiniz? 📦";
-  }
-
-  if (userMessage.includes("fiyat")) {
-    return "Ürün fiyatlarımız modele ve özelliklere göre değişmektedir. Hangi ürünün fiyatını öğrenmek istersiniz?";
-  }
-
-  if (userMessage.includes("iade") || userMessage.includes("iptal")) {
-    return "İade ve iptal süreçleri mağaza politikalarına göre değişmektedir. Sipariş numarasını iletir misiniz?";
-  }
-
-  if (userMessage.includes("ürün tavsiye") || userMessage.includes("ne önerirsin")) {
-    return "Kullanım amacını söylersen uygun ürün önerisi yapabilirim 🤖";
-  }
-
-  // Her soruda fallback cevap
-  return "Sorunuzu tam anlayamadım 😔 biraz daha detaylandırabilir misiniz?";
-}
+export default router;
