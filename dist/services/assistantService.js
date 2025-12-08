@@ -655,3 +655,71 @@ export async function getAssistantReply(shopId, userMessage) {
 export async function getAIResponse(shopId, userMessage) {
     return generateSmartReply(shopId, userMessage);
 }
+function buildCombinationSuggestion(
+  mainProduct: Product | null,
+  allProducts: Product[]
+): string {
+  const p = mainProduct || allProducts[0];
+  const cat = (p?.category || "genel").toLowerCase();
+
+  const format = (prod: Product) => {
+    return `✨ ${prod.title}\n${prod.price ? `💰 ${prod.price}` : ""}\n`;
+  };
+
+  let result = `🧩 Bu ürünle ilgili sana kombin / birlikte kullanım önerisi yapayım:\n\n`;
+
+  // GİYİM KATEGORİSİ
+  if (cat.includes("giyim") || cat.includes("elbise") || cat.includes("pantolon")) {
+    result += `👕 Ana ürün: ${p.title}\n`;
+    result += `🧥 Üst için: Daha sade bir renk seçilebilir.\n`;
+    result += `👖 Alt için: Açık tonlar uyum sağlar.\n`;
+    result += `👟 Ayakkabı: Beyaz sneaker her zaman kurtarıcıdır.\n`;
+    result += `💡 Uyum yakalamak için ton eşleşmesi önemli.\n`;
+    return result;
+  }
+
+  // AYAKKABI
+  if (cat.includes("ayakkabi") || cat.includes("ayakkabı")) {
+    result += `👟 ${p.title} günlük kullanımda rahat bir seçim.\n`;
+    result += `👖 Üstüne slim fit pantolon yakışır.\n`;
+    result += `👕 Basic renklerde tişört ile daha sade durur.\n`;
+    result += `💡 Rahatlık isteyenler için hafif taban + nefes alan yapı tercih edilir.\n`;
+    return result;
+  }
+
+  // ELEKTRONİK
+  if (cat.includes("elektronik") || cat.includes("telefon") || cat.includes("laptop")) {
+    result += `💻 ${p.title} ile birlikte alabileceğin öneriler:\n`;
+    result += `🔌 Şarj adaptörü\n🛡️ Kılıf veya koruyucu\n🎧 Gerekiyorsa kulaklık\n`;
+    return result;
+  }
+
+  // KAMP
+  if (cat.includes("kamp") || cat.includes("outdoor")) {
+    result += `🏕️ Kamp ürünleri yanında şunlar iyi gider:\n`;
+    result += `🛏️ Mat veya uyku tulumu\n`;
+    result += `🔦 Kamp lambası veya fener\n`;
+    return result;
+  }
+
+  // HIRDAVAT
+  if (cat.includes("hırdavat") || cat.includes("hirdavat") || cat.includes("tornavida")) {
+    result += `🔧 Kullanırken eldiven veya güvenlik gözlüğü tavsiye edilir.\n`;
+    result += `🧰 Birlikte alınabilecek ürünler:\n`;
+    result += `🪛 Uç seti\n🦺 Koruyucu ekipman\n`;
+    return result;
+  }
+
+  // OYUNCAK
+  if (cat.includes("oyuncak")) {
+    result += `🧸 Aynı yaş grubuna uygun ikinci bir oyuncak iyi gider.\n`;
+    result += `🎁 Eğitim setleri ile birlikte alınabilir.\n`;
+    return result;
+  }
+
+  // GENEL ÖNERİ
+  result += `📦 ${p.title}\n`;
+  result += `⭐ Bununla beraber alabileceğin başka ürünler varsa tamamlayıcı olabilir.\n`;
+  result += `🔍 Ürün detayına göre seçim yapılmalı.\n`;
+  return result;
+}
