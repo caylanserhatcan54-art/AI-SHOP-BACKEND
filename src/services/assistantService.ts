@@ -994,6 +994,61 @@ export async function generateSmartReply(
   const products = await getProductsForShop(shopId);
   const intent = detectIntent(trimmed);
 
+  const lower = normalizeText(trimmed);
+
+  // 👉 1. Önce sohbet (ürünsüz konuşma) kontrolü
+  if (intent === "SMALL_TALK") {
+    const match = DAILY_TALK_PATTERNS.find((p) => p.regex.test(trimmed));
+    if (match) {
+      return match.answer;
+    }
+
+    return "Buradayım 😊 Nasıl yardımcı olabilirim?";
+  }
+
+  // 👉 2. Kullanıcı özel olarak 3 ürün istiyorsa
+  if (
+    lower.includes("3 ürün") ||
+    lower.includes("üç ürün") ||
+    lower.includes("3 öner") ||
+    lower.includes("üç öner") ||
+    lower.includes("3 tane")
+  ) {
+    const list = products.slice(0, 3);
+    if (!list.length) return "Ürün bulamadım 😕";
+
+    return (
+      "🛒 Senin için seçtiğim 3 ürün:\n\n" +
+      list.map(formatProductSummary).join("\n\n") +
+      "\n\nİçinden hangisi ilgini çekti?"
+    );
+  }
+
+  // 👉 3. Mantıklı olan hangisi? — karşılaştır
+  if (
+    lower.includes("hangisi mantıklı") ||
+    lower.includes("mantıklı hangisi") ||
+    lower.includes("karşılaştır")
+  ) {
+    if (products.length < 2) return "Karşılaştıracak iki ürün bulamadım 😅";
+
+    const A = products[0];
+    const B = products[1];
+
+    return (
+      "🧠 Senin için kıyasladım 👇\n\n" +
+      `👉 **${A.title}**\n+ Daha uygun fiyatlı: ${A.price}\n\n` +
+      `👉 **${B.title}**\n+ Daha yeni model olabilir.\n\n` +
+      `Ben olsam **${A.title}** alırdım 👍`
+    );
+  }
+
+  // 👉 4. Kullanıcı adı söyledi ise
+  if (name) {
+    return `Memnun oldum ${name}! 😊\nNasıl yardımcı olabilirim?`;
+  }
+
+  // 👉 5. Default ürün tabanlı akıllı cevap
   return buildReplyForIntent(intent, trimmed, products, name);
 }
 
