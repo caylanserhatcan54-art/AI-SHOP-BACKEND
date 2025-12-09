@@ -187,28 +187,31 @@ function detectStoreCategory(products) {
  */
 function detectIntent(msg) {
     const t = normalizeText(msg);
-    // günlük konuşmalar
-    if (/(nasılsın|nasilsin|napıyorsun|ne yapıyorsun)/i.test(msg))
+    // 👉 Small Talk (Ürünle ilgisi olmayan sohbet)
+    if (t.includes("nasilsin") ||
+        t.includes("ne yapıyorsun") ||
+        t.includes("napıyorsun") ||
+        t.includes("canım sıkıldı") ||
+        t.includes("sıkıldım") ||
+        t.includes("bot musun") ||
+        t.includes("yapay zeka") ||
+        t.includes("gerçek misin")) {
         return "SMALL_TALK";
-    if (/(canım sıkıldı|sıkıldım|modum düşük)/i.test(msg))
-        return "SMALL_TALK";
-    if (/(bot musun|gerçek misin|yapay zeka)/i.test(msg))
-        return "SMALL_TALK";
-    // isim verme
-    if (/benim adım/i.test(msg) || /adım/i.test(msg))
-        return "SMALL_TALK";
-    // satın alma niyeti
-    if (/(sepete attım|sepete ekledim|alayım mı|satın alacağım|sipariş veriyorum)/i.test(msg))
+    }
+    // 👉 Ürün sorulmayan ama niyet içeren sohbetler
+    if (t.includes("hangisi mantıklı") || t.includes("mantıklı mı")) {
         return "ASK_RECOMMENDATION";
-    // net tavsiye isteyen
-    if (/(hangisi mantıklı|hangisini alayım|karşılaştır|kıyasla|sen olsan hangisini alırdın)/i.test(msg))
+    }
+    if (t.includes("üç tane öner") || t.includes("3 tane öner") || t.includes("bana üç öner")) {
         return "ASK_RECOMMENDATION";
-    // 3 ürün isterse
-    if (/(3 ürün|üç ürün|bana üç tane öner|öneri ver)/i.test(msg))
+    }
+    if (t.includes("sepete attım") || t.includes("alayım mı")) {
         return "ASK_RECOMMENDATION";
-    if (t.includes("fiyat") || t.includes("kaç lira"))
+    }
+    // 👉 Sonra ürün sorularını işle
+    if (t.includes("fiyat"))
         return "ASK_PRICE";
-    if (t.includes("stok") || t.includes("var mı"))
+    if (t.includes("stok"))
         return "ASK_STOCK";
     if (t.includes("renk"))
         return "ASK_COLOR";
@@ -216,19 +219,17 @@ function detectIntent(msg) {
         return "ASK_SIZE";
     if (t.includes("malzeme") || t.includes("kalite"))
         return "ASK_MATERIAL";
-    if (t.includes("nerede kullanılır") || t.includes("ne için"))
-        return "ASK_USAGE";
-    if (t.includes("uygun mu"))
+    if (t.includes("nerede kullanılır") || t.includes("uygun mu"))
         return "ASK_SUITABILITY";
-    if (t.includes("kombin"))
+    if (t.includes("kombin") || t.includes("yakışır mı"))
         return "ASK_COMBINATION";
     if (t.includes("kargo") || t.includes("ne zaman gelir"))
         return "ASK_SHIPPING";
-    if (t.includes("iade"))
+    if (t.includes("iade") || t.includes("değişim"))
         return "ASK_RETURN";
-    if (t.includes("kargom nerede") || t.includes("sipariş takip"))
+    if (t.includes("kargom nerede") || t.includes("sipariş"))
         return "TRACK_ORDER";
-    if (t.includes("kötü") || t.includes("şikayet"))
+    if (t.includes("şikayet"))
         return "COMPLAINT";
     return "UNKNOWN";
 }
