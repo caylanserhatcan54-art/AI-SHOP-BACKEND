@@ -10,6 +10,12 @@ let CUSTOMER_MEMORY = {
     lastUserMessage: null,
     lastTimestamp: Date.now(),
 };
+let DYNAMIC_PROFILE = {
+    lastFavoriteColor: null,
+    lastBudget: null,
+    lastSize: null,
+    lastInterestCategory: null,
+};
 /**
  * Bu fonksiyon her mesajdan sonra hafızayı günceller
  */
@@ -889,6 +895,116 @@ function buildMergedResponse(intents, msg, products, main) {
     }
     return full.trim();
 }
+function buildPurchasePressure(mainProduct) {
+    if (!mainProduct)
+        return "";
+    const rnd = Math.random();
+    if (rnd < 0.25)
+        return "\n🔥 Bu ürün son 48 saatte çok görüntülenmiş. Bitmeden almak mantıklı.";
+    if (rnd < 0.45)
+        return "\n⏳ Bu beden/numarada stoklar hızlı tükeniyor olabilir.";
+    if (rnd < 0.65)
+        return "\n⭐ Aynı ürün kullanıcıların son dönem favorileri arasında görünüyor.";
+    if (rnd < 0.85)
+        return "\n💬 Son 1 hafta içinde olumlu geri bildirim fazlaymış.";
+    return "\n💡 Ürün şu an iyi fiyat seviyesinde, fiyat artmadan almak mantıklı.";
+}
+function toneAdjust(message) {
+    const t = normalizeText(message);
+    if (t.includes("sinirlendim") || t.includes("rezalet") || t.includes("kotu"))
+        return "SOFT";
+    if (t.includes("acil") || t.includes("hemen") || t.includes("çabuk"))
+        return "FAST";
+    if (t.includes("teşekkür") || t.includes("tesekkur") || t.includes("süper"))
+        return "FRIENDLY";
+    if (t.includes("neden") || t.includes("açıkla") || t.includes("ozel olarak"))
+        return "FORMAL";
+    return "FRIENDLY";
+}
+function applyToneStyle(text, tone) {
+    switch (tone) {
+        case "FAST":
+            return text + "\n⚡ Hızlı özetle yardımcı oldum.";
+        case "SOFT":
+            return "😌 Öncelikle sakin olmanı isterim.\n" + text;
+        case "FORMAL":
+            return "Eksiksiz açıklama 👇\n" + text;
+        case "FRIENDLY":
+        default:
+            return "😊 " + text;
+    }
+}
+function updateUserProfile(msg, products, main) {
+    const t = normalizeText(msg);
+    if (t.includes("siyah"))
+        DYNAMIC_PROFILE.lastFavoriteColor = "siyah";
+    if (t.includes("kırmızı"))
+        DYNAMIC_PROFILE.lastFavoriteColor = "kırmızı";
+    if (t.includes("mavi"))
+        DYNAMIC_PROFILE.lastFavoriteColor = "mavi";
+    const priceMatch = msg.match(/(\d{3,5}) ?tl/);
+    if (priceMatch)
+        DYNAMIC_PROFILE.lastBudget = parseInt(priceMatch[1]);
+    const sizeMatch = msg.match(/\b(36|37|38|39|40|41|42|43)\b/);
+    if (sizeMatch)
+        DYNAMIC_PROFILE.lastSize = sizeMatch[0];
+    if (main && main.category)
+        DYNAMIC_PROFILE.lastInterestCategory = main.category;
+}
+function profileHints() {
+    let lines = [];
+    if (DYNAMIC_PROFILE.lastFavoriteColor)
+        lines.push(`🎨 Daha önce **${DYNAMIC_PROFILE.lastFavoriteColor}** rengi sevdiğini söylemiştin.`);
+    if (DYNAMIC_PROFILE.lastBudget)
+        lines.push(`💰 Geçmiş seçimlerin genelde **${DYNAMIC_PROFILE.lastBudget} TL civarıydı.**`);
+    if (DYNAMIC_PROFILE.lastSize)
+        lines.push(`📏 Bir önceki seçiminde **${DYNAMIC_PROFILE.lastSize}** düşünmüştün.`);
+    if (DYNAMIC_PROFILE.lastInterestCategory)
+        lines.push(`🛍️ Sen daha çok **${DYNAMIC_PROFILE.lastInterestCategory}** ürünlerine bakmıştın.`);
+    if (!lines.length)
+        return "";
+    return "\n👇 Senin geçmiş seçimlerine göre:\n" + lines.join("\n");
+}
+function scoreProduct(p) {
+    let score = 50;
+    const title = normalizeText(p.title || "");
+    if (title.includes("premium"))
+        score += 20;
+    if (title.includes("su geçirmez") || title.includes("waterproof"))
+        score += 15;
+    if (title.includes("kış") || title.includes("kis"))
+        score += 10;
+    const priceValue = p.price ? parseInt(p.price.toString()) : 0;
+    // 1500 üstü
+    if (priceValue > 1500)
+        score += 10;
+    // 800 altı uygun fiyat
+    if (priceValue < 800)
+        score += 5;
+    return score;
+}
+function compareProductsWithScore(products) {
+    const firstTwo = products.slice(0, 2);
+    if (firstTwo.length < 2)
+        return "";
+    const A = firstTwo[0];
+    const B = firstTwo[1];
+    const scoreA = scoreProduct(A);
+    const scoreB = scoreProduct(B);
+    return `
+🧠 Puanlı kıyaslama
+
+🏷 ${A.title}
+⭐ Skor: ${scoreA}/100
+
+VS
+
+🏷 ${B.title}
+⭐ Skor: ${scoreB}/100
+
+🎯 Bana göre **${scoreA > scoreB ? A.title : B.title}** daha mantıklı tercih.
+`;
+}
 /**
  * Tüm akıllı katmanları birleştiren ana fonksiyon
  */
@@ -898,6 +1014,8 @@ function buildFullSmartResponse(intent, message, products, customerName) {
     if (calm)
         return calm;
     const base = buildReplyForIntent(intent, message, products, customerName);
+    const matches = findMatchingProducts(message, products);
+    const mainProduct = matches[0] || products[0] || null;
     const sentiment = detectSentiment(message);
     const tone = sentimentTone(sentiment);
     const purchase = detectPurchaseIntent(message);
@@ -906,6 +1024,11 @@ function buildFullSmartResponse(intent, message, products, customerName) {
     let reply = base + tone + persuasion;
     if (empathy)
         reply += "\n\n" + empathy;
+    updateUserProfile(message, products, mainProduct);
+    reply += buildPurchasePressure(mainProduct);
+    reply += profileHints();
+    reply = applyToneStyle(reply, toneAdjust(message));
+    reply += compareProductsWithScore(products);
     return reply;
 }
 /**
