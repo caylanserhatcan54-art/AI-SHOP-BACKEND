@@ -1,5 +1,74 @@
 // src/services/assistantService.ts
 import { getProductsForShop, normalizeText, } from "./productService.js";
+let CUSTOMER_MEMORY = {
+    lastSeenProduct: null,
+    lastSeenCategory: null,
+    lastColor: null,
+    lastSize: null,
+    lastBudget: null,
+    lastTargetPerson: null,
+    lastUserMessage: null,
+    lastTimestamp: Date.now(),
+};
+/**
+ * Bu fonksiyon her mesajdan sonra hafızayı günceller
+ */
+function updateMemory(userMsg, products, main) {
+    const t = normalizeText(userMsg);
+    CUSTOMER_MEMORY.lastUserMessage = userMsg;
+    CUSTOMER_MEMORY.lastTimestamp = Date.now();
+    // Bütçe yakalama
+    const budgetMatch = t.match(/\b(\d{3,5})\b/);
+    if (budgetMatch)
+        CUSTOMER_MEMORY.lastBudget = parseInt(budgetMatch[1]);
+    // Renk yakalama
+    if (t.includes("siyah"))
+        CUSTOMER_MEMORY.lastColor = "siyah";
+    if (t.includes("beyaz"))
+        CUSTOMER_MEMORY.lastColor = "beyaz";
+    if (t.includes("kırmızı") || t.includes("kirmizi"))
+        CUSTOMER_MEMORY.lastColor = "kırmızı";
+    if (t.includes("mavi"))
+        CUSTOMER_MEMORY.lastColor = "mavi";
+    // Numara yakalama
+    const sizeMatch = userMsg.match(/\b(36|37|38|39|40|41|42|43|44)\b/);
+    if (sizeMatch)
+        CUSTOMER_MEMORY.lastSize = sizeMatch[0];
+    // Hedef kişi yakalama
+    if (t.includes("kendime") || t.includes("beni için"))
+        CUSTOMER_MEMORY.lastTargetPerson = "SELF";
+    if (t.includes("anneme") || t.includes("anneye"))
+        CUSTOMER_MEMORY.lastTargetPerson = "ANNEM";
+    if (t.includes("babam") || t.includes("babaya"))
+        CUSTOMER_MEMORY.lastTargetPerson = "BABAM";
+    if (t.includes("kızıma") || t.includes("oğluma") || t.includes("çocuğuma"))
+        CUSTOMER_MEMORY.lastTargetPerson = "COCUK";
+    // Son kategori
+    if (products.length)
+        CUSTOMER_MEMORY.lastSeenCategory = products[0].category ?? CUSTOMER_MEMORY.lastSeenCategory;
+    // Son ürün kaydı
+    if (main)
+        CUSTOMER_MEMORY.lastSeenProduct = main;
+}
+/**
+ * Memory tabanlı ek hatırlatma satırı
+ */
+function replyWithMemoryHints() {
+    const lines = [];
+    if (CUSTOMER_MEMORY.lastColor)
+        lines.push(`🎨 Son sefer **${CUSTOMER_MEMORY.lastColor}** renk istemiştin.`);
+    if (CUSTOMER_MEMORY.lastSize)
+        lines.push(`📏 Daha önce **${CUSTOMER_MEMORY.lastSize}** beden demiştin.`);
+    if (CUSTOMER_MEMORY.lastBudget)
+        lines.push(`💰 Bütçen yaklaşık **${CUSTOMER_MEMORY.lastBudget} TL** seviyesindeydi.`);
+    if (CUSTOMER_MEMORY.lastSeenCategory)
+        lines.push(`🛍️ Son baktığın kategori: **${CUSTOMER_MEMORY.lastSeenCategory}**`);
+    if (CUSTOMER_MEMORY.lastTargetPerson === "ANNEM")
+        lines.push("👩 Anne için bakıyordun, hâlâ onun için mi?");
+    if (CUSTOMER_MEMORY.lastTargetPerson === "COCUK")
+        lines.push("🧒 Çocuk için bakıyordun, yaş bilgisi de verirsen daha iyi öneririm.");
+    return lines.length ? "\n\n🧠 Hatırladıklarım:\n" + lines.join("\n") : "";
+}
 /**
  * Türkçe stop-word'ler
  */
@@ -378,6 +447,38 @@ function detectIntent(msg) {
         t.includes("hayal kirikligi"))
         return "COMPLAINT";
     return "UNKNOWN";
+}
+/* ----------------------------------------------
+ * Çoklu Intent Tespit
+ * ---------------------------------------------- */
+function detectMultipleIntents(msg) {
+    const intents = [];
+    const t = normalizeText(msg);
+    if (/fiyat|kaca|ne kadar|ucret/.test(t))
+        intents.push("ASK_PRICE");
+    if (/stok|var mi|tukendi/.test(t))
+        intents.push("ASK_STOCK");
+    if (/renk|hangi renk/.test(t))
+        intents.push("ASK_COLOR");
+    if (/beden|numara|kac beden/.test(t))
+        intents.push("ASK_SIZE");
+    if (/malzeme|icerik|kumas/.test(t))
+        intents.push("ASK_MATERIAL");
+    if (/ne icin|nerede kullan/.test(t))
+        intents.push("ASK_USAGE");
+    if (/uyar mi|uygun mu/.test(t))
+        intents.push("ASK_SUITABILITY");
+    if (/kombin|yanina ne olur|neyle olur/.test(t))
+        intents.push("ASK_COMBINATION");
+    if (/kargo|teslimat|ne zaman gelir/.test(t))
+        intents.push("ASK_SHIPPING");
+    if (/iade|degisim/.test(t))
+        intents.push("ASK_RETURN");
+    if (/takip|nerede|kargom/.test(t))
+        intents.push("TRACK_ORDER");
+    if (!intents.length)
+        intents.push(detectIntent(msg));
+    return intents;
 }
 /**
  * Kullanıcının metniyle ürün eşleştirme
@@ -780,6 +881,14 @@ function buildReplyForIntent(intent, userMessage, products, customerName) {
                 (displayName ? ` ${displayName}` : ""));
     }
 }
+function buildMergedResponse(intents, msg, products, main) {
+    let full = "";
+    for (const intent of intents) {
+        const part = buildReplyForIntent(intent, msg, products, null);
+        full += "\n\n" + part;
+    }
+    return full.trim();
+}
 /**
  * Tüm akıllı katmanları birleştiren ana fonksiyon
  */
@@ -803,14 +912,17 @@ function buildFullSmartResponse(intent, message, products, customerName) {
  * DIŞARI AÇILAN ANA FONKSİYON
  */
 export async function generateSmartReply(shopId, userMessage) {
-    const trimmed = (userMessage || "").trim();
-    if (!trimmed) {
-        return "Merhaba 👋 Ne hakkında yardımcı olmamı istersin? Ürün, kombin, fiyat veya kargo hakkında soru sorabilirsin.";
-    }
-    const name = extractCustomerName(trimmed);
+    const msg = (userMessage || "").trim();
+    if (!msg)
+        return "Merhaba 👋 Nasıl yardımcı olayım?";
+    const name = extractCustomerName(msg);
     const products = await getProductsForShop(shopId);
-    const intent = detectIntent(trimmed);
-    return buildFullSmartResponse(intent, trimmed, products, name);
+    const intents = detectMultipleIntents(msg);
+    const main = findMatchingProducts(msg, products)[0] || products[0] || null;
+    updateMemory(msg, products, main);
+    let reply = buildMergedResponse(intents, msg, products, main);
+    reply += replyWithMemoryHints();
+    return reply;
 }
 /**
  * Geriye dönük uyumluluk için alias fonksiyonlar
