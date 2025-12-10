@@ -6,6 +6,7 @@ const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use("/qr", express.static("public/qr"));
 
 // health
 app.get("/api/health", (req, res) => {

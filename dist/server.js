@@ -4,6 +4,7 @@ import assistantRouter from "./routes/assistant.js";
 const app = express();
 app.use(cors());
 app.use(express.json());
+app.use("/qr", express.static("public/qr"));
 // health
 app.get("/api/health", (req, res) => {
     res.json({ message: "Backend çalışıyor 🚀" });
