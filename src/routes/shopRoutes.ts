@@ -1,42 +1,44 @@
 import { Router } from "express";
-import { generateQr } from "../utils/generateQr.js";
 import fs from "fs";
 import path from "path";
 
 const router = Router();
 
-// QR üretme endpointi
-router.post("/generate-qr", async (req, res) => {
+// REGISTER SHOP
+router.post("/register", async (req, res) => {
   try {
-    const { shopId } = req.body;
+    const { shopId, shopName, platform } = req.body;
 
     if (!shopId) {
-      return res.status(400).json({ error: "shopId gerekli" });
+      return res.status(400).json({ ok: false, msg: "shopId gerekli!" });
     }
 
-    const qr = await generateQr(shopId);
+    const dataPath = path.join(process.cwd(), "public", "shops.json");
 
-    return res.json({
-      ok: true,
-      qrUrl: `https://ai-shop-backend-2.onrender.com/api/shop/get-qr/${qr.fileName}`,
-    });
+    let shops = [];
 
-  } catch (err) {
-    console.error("QR ERROR:", err);
-    res.status(500).json({ error: "QR üretilemedi" });
+    if (fs.existsSync(dataPath)) {
+      const fileData = fs.readFileSync(dataPath, "utf8");
+      shops = JSON.parse(fileData);
+    }
+
+    const exists = shops.find((s: any) => s.shopId === shopId);
+    if (!exists) {
+      shops.push({
+        shopId,
+        shopName: shopName || "Unnamed Store",
+        platform: platform || "unknown",
+        createdAt: Date.now()
+      });
+
+      fs.writeFileSync(dataPath, JSON.stringify(shops, null, 2));
+    }
+
+    res.json({ ok: true, msg: "Shop registered successfully" });
+
+  } catch (e) {
+    res.status(500).json({ ok: false, msg: "Error registering shop", e });
   }
-});
-
-// QR dosyası gösterme endpointi
-router.get("/get-qr/:name", (req, res) => {
-  const { name } = req.params;
-  const filePath = path.join("/tmp/qr", name);
-
-  if (!fs.existsSync(filePath)) {
-    return res.status(404).send("QR bulunamadı");
-  }
-
-  return res.sendFile(filePath);
 });
 
 export default router;
