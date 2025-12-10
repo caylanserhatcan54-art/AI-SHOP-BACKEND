@@ -23,9 +23,12 @@ router.post("/register", (req, res) => {
       createdAt: Date.now(),
     };
 
+    const fileContent = JSON.stringify(shopData, null, 2);
+
     fs.writeFileSync(
       path.join(shopsDir, `${shopId}.json`),
-      JSON.stringify(shopData, null, 2)
+      fileContent.toString(), // ⭐ Buffer hatası çözüldü
+      "utf-8"
     );
 
     res.json({ ok: true, msg: "Shop registered successfully" });
@@ -74,7 +77,7 @@ router.get("/public/:shopId", (req, res) => {
       return res.json({ ok: false, msg: "Shop bulunamadı ❌" });
     }
 
-    const shopData = JSON.parse(fs.readFileSync(shopFile));
+    const shopData = JSON.parse(fs.readFileSync(shopFile, "utf-8"));
 
     res.json({ ok: true, shop: shopData });
 
