@@ -1,5 +1,5 @@
-declare namespace Express {
-  export interface Request {
-    file?: any;
+declare namespace NodeJS {
+  interface ProcessEnv {
+    PUBLIC_PANEL_URL: string;
   }
 }
