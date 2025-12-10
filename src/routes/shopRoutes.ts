@@ -11,16 +11,16 @@ router.post("/generate-qr", async (req, res) => {
       return res.status(400).json({ error: "shopId gerekli" });
     }
 
-    const qrFileName = await generateQr(shopId);
+    const qrFile = await generateQr(shopId);
 
     return res.json({
       ok: true,
       shopId,
-      qrUrl: `https://ai-shop-backend-2.onrender.com/qr/${qrFileName}`
+      qrUrl: `https://ai-shop-backend-2.onrender.com/qr/${shopId}.png`,
     });
 
-  } catch (error) {
-    console.log("QR ERROR:", error);
+  } catch (err) {
+    console.error("QR ERROR:", err);
     return res.status(500).json({ error: "QR üretilemedi" });
   }
 });

@@ -6,9 +6,8 @@ export async function generateQr(shopId) {
     if (!fs.existsSync(folder)) {
         fs.mkdirSync(folder, { recursive: true });
     }
-    const fileName = `${shopId}.png`;
-    const imagePath = path.join(folder, fileName);
+    const imgPath = `${folder}/${shopId}.png`;
     const url = `https://ai-shop-site.vercel.app/shop?shop=${shopId}`;
-    await QRCode.toFile(imagePath, url);
-    return fileName;
+    await QRCode.toFile(imgPath, url);
+    return imgPath;
 }
