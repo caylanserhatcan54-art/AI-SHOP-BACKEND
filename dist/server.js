@@ -1,12 +1,17 @@
 import express from "express";
 import cors from "cors";
-import path from "path";
+import path, { dirname } from "path";
 import assistantRouter from "./routes/assistant.js";
+import { fileURLToPath } from "url";
 const app = express();
+// ESM için __dirname tanımlıyoruz
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 app.use(cors());
 app.use(express.json());
+// QR klasörünü yayınlama
 app.use("/qr", express.static(path.join(__dirname, "../public/qr")));
-// health
+// health endpoint
 app.get("/api/health", (req, res) => {
     res.json({ message: "Backend çalışıyor 🚀" });
 });
