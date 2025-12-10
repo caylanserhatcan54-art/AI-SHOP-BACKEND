@@ -28,17 +28,19 @@ router.post("/register", (req, res) => {
         res.status(500).json({ ok: false, msg: "Shop kayıt hatası" });
     }
 });
+// QR Generate
 router.post("/generate-qr", async (req, res) => {
     try {
         const { shopId } = req.body;
         if (!shopId) {
-            return res.status(400).json({ ok: false, msg: "shopId gerekiyor!" });
+            return res.status(400).json({ ok: false, msg: "shopId gerekli!" });
         }
         const qrDir = path.join(process.cwd(), "public", "qr");
         if (!fs.existsSync(qrDir))
             fs.mkdirSync(qrDir, { recursive: true });
         const qrPath = path.join(qrDir, `${shopId}.png`);
-        const shopUrl = `https://flowai-shop-panel-lfvyl14yt-serhats-projects-cbfdb63c.vercel.app/shop/${shopId}`;
+        // ✔ Yeni frontend linki
+        const shopUrl = `https://flowai-shop-panel-1-49viicxy9-serhats-projects-cbfdb63c.vercel.app/shop/${shopId}`;
         await QRCode.toFile(qrPath, shopUrl);
         res.json({
             ok: true,
@@ -46,8 +48,7 @@ router.post("/generate-qr", async (req, res) => {
             shopUrl,
         });
     }
-    catch (error) {
-        console.log(error);
+    catch (e) {
         res.status(500).json({ ok: false, msg: "QR üretilemedi" });
     }
 });
