@@ -12,18 +12,26 @@ const __dirname = dirname(__filename);
 
 const app = express();
 
+// MIDDLEWARES
 app.use(cors());
 app.use(express.json());
 
+
+// ROUTES
 app.use("/api/assistant", assistantRouter);
 app.use("/api/shop", shopRoutes);
 
-// STATIC FILES
+
+// STATIC QR SERVING
 app.use("/qr", express.static(path.join(process.cwd(), "public", "qr")));
 
+
+// DEFAULT TEST ROUTE
 app.get("/", (req, res) => {
-  res.send("Backend çalışıyor ✔");
+  res.send("Backend aktif ✔ QR aktif ✔ Assistant aktif 🤖");
 });
 
+
+// SERVER LISTEN
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Backend running on ${PORT}`));
+app.listen(PORT, () => console.log(`Backend running on PORT: ${PORT}`));
