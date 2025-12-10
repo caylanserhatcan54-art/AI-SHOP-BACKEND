@@ -12,7 +12,7 @@ const __dirname = dirname(__filename);
 app.use(cors());
 app.use(express.json());
 // QR klasörünü public olarak açıyoruz
-app.use("/qr", express.static(path.join(__dirname, "../public/qr")));
+app.use("/qr", express.static("/tmp/qr"));
 // Health check
 app.get("/api/health", (req, res) => {
     res.json({ message: "Backend çalışıyor 🚀" });
