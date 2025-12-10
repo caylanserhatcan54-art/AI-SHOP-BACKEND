@@ -1,22 +1,16 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "module": "ESNext",
-    "moduleResolution": "Node",
-    "outDir": "./dist",
-    "allowJs": true,
-    "esModuleInterop": true,
+    "target": "es2020",
+    "module": "es2020",
+    "rootDir": "src",
+    "outDir": "dist",
+    "moduleResolution": "node",
     "resolveJsonModule": true,
-    "strict": false,
-    "skipLibCheck": true
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "strict": false
   },
-  "exclude": [
-    "**/node_modules",
-    "**/dist",
-    "my-app",
-    "ai-shop-site",
-    "frontend",
-    "app",
-    "ui"
-  ]
+  "include": ["src"],
+  "exclude": ["node_modules"]
 }
