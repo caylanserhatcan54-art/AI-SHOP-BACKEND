@@ -3,23 +3,18 @@ import fs from "fs";
 import path from "path";
 
 export async function generateQr(shopId: string) {
-  console.log("QR oluşturuluyor:", shopId);
-
-  const folder = "/tmp/qr";
+  const folder = path.join(process.cwd(), "public/qr");
 
   if (!fs.existsSync(folder)) {
     fs.mkdirSync(folder, { recursive: true });
-    console.log("QR klasörü oluşturuldu:", folder);
   }
 
   const fileName = `${shopId}.png`;
-  const filePath = `${folder}/${fileName}`;
-  const redirectUrl = `https://ai-shop-site.vercel.app/shop?shop=${shopId}`;
+  const imagePath = path.join(folder, fileName);
 
-  // QR üretimi
-  await QRCode.toFile(filePath, redirectUrl);
+  const url = `https://ai-shop-site.vercel.app/shop?shop=${shopId}`;
 
-  console.log("QR oluşturuldu:", filePath);
+  await QRCode.toFile(imagePath, url);
 
   return fileName;
 }
