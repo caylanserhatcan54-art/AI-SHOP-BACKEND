@@ -51,7 +51,7 @@ router.post("/generate-qr", async (req, res) => {
     if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
 
     const qrPath = path.join(qrDir, `${shopId}.png`);
-    const shopUrl = `https://flowai-shop-panel-lfvyl14yt-serhats-projects-cbfdb63c.vercel.app/shop/${shopId}`;
+    const shopUrl = `https://flowai-shop-panel.vercel.app/shop/${shopId}`;
 
     await QRCode.toFile(qrPath, shopUrl);
 
