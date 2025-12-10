@@ -1,43 +1,37 @@
 import { Router } from "express";
+import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
 
 const router = Router();
 
-// REGISTER SHOP
-router.post("/register", async (req, res) => {
+// QR Generate
+router.post("/generate-qr", async (req, res) => {
   try {
-    const { shopId, shopName, platform } = req.body;
+    const { shopId } = req.body;
 
     if (!shopId) {
       return res.status(400).json({ ok: false, msg: "shopId gerekli!" });
     }
 
-    const dataPath = path.join(process.cwd(), "public", "shops.json");
+    // store QR folder under /public/qr
+    const qrDir = path.join(process.cwd(), "public", "qr");
+    if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
 
-    let shops = [];
+    const qrPath = path.join(qrDir, `${shopId}.png`);
+    const shopUrl = `https://ai-shop-site.vercel.app/qr/${shopId}`;
 
-    if (fs.existsSync(dataPath)) {
-      const fileData = fs.readFileSync(dataPath, "utf8");
-      shops = JSON.parse(fileData);
-    }
+    await QRCode.toFile(qrPath, shopUrl);
 
-    const exists = shops.find((s: any) => s.shopId === shopId);
-    if (!exists) {
-      shops.push({
-        shopId,
-        shopName: shopName || "Unnamed Store",
-        platform: platform || "unknown",
-        createdAt: Date.now()
-      });
-
-      fs.writeFileSync(dataPath, JSON.stringify(shops, null, 2));
-    }
-
-    res.json({ ok: true, msg: "Shop registered successfully" });
+    res.json({
+      ok: true,
+      qrUrl: `https://ai-shop-backend-2.onrender.com/qr/${shopId}.png`,
+      shopUrl,
+    });
 
   } catch (e) {
-    res.status(500).json({ ok: false, msg: "Error registering shop", e });
+    console.log(e);
+    res.status(500).json({ ok: false, msg: "QR üretilemedi" });
   }
 });
 
