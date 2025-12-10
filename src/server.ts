@@ -2,6 +2,7 @@ import express, { Request, Response } from "express";
 import cors from "cors";
 import path, { dirname } from "path";
 import assistantRouter from "./routes/assistant.js";
+import shopRoutes from "./routes/shopRoutes.js";
 import { fileURLToPath } from "url";
 import QRCode from "qrcode";
 import fs from "fs";
@@ -17,6 +18,7 @@ app.use(express.json());
 
 // QR klasörünü public olarak açıyoruz
 app.use("/qr", express.static("/tmp/qr"));
+app.use("/api/shop", shopRoutes);
 
 // Health check
 app.get("/api/health", (req: Request, res: Response) => {

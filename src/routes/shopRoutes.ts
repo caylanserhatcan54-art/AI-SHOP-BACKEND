@@ -1,9 +1,9 @@
 import express from "express";
-import { generateShopQR } from "../utils/qrGenerator";
+import { generateQr } from "../utils/generateQr.js";
 
 const router = express.Router();
 
-router.post("/generate-qr", async (req, res) => {
+router.post("/create-qr", async (req, res) => {
   try {
     const { shopId } = req.body;
 
@@ -11,16 +11,19 @@ router.post("/generate-qr", async (req, res) => {
       return res.status(400).json({ error: "shopId gerekli" });
     }
 
-    const qr = await generateShopQR(shopId);
+    const fileName = await generateQr(shopId);
+
+    const qrUrl = `https://ai-shop-backend-2.onrender.com/qr/${fileName}`;
 
     return res.json({
-      status: "success",
-      qrUrl: qr.qrUrl
+      ok: true,
+      shopId,
+      qrUrl
     });
 
   } catch (err) {
-    console.error(err);
-    return res.status(500).json({ error: "QR oluşturulamadı" });
+    console.log("QR oluşturma hatası", err);
+    return res.status(500).json({ error: "QR oluşturulamadı!" });
   }
 });
 
