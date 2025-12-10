@@ -1,31 +1,33 @@
 import { Router } from "express";
+import { generateQr } from "../utils/generateQr.js";
 import fs from "fs";
-import QRCode from "qrcode";
 import path from "path";
 const router = Router();
+// QR üretme endpointi
 router.post("/generate-qr", async (req, res) => {
     try {
         const { shopId } = req.body;
         if (!shopId) {
-            return res.status(400).json({ error: "shopId zorunludur" });
+            return res.status(400).json({ error: "shopId gerekli" });
         }
-        const qrFolder = path.join(process.cwd(), "public", "qr");
-        const filePath = path.join(qrFolder, `${shopId}.png`);
-        if (!fs.existsSync(qrFolder)) {
-            fs.mkdirSync(qrFolder, { recursive: true });
-        }
-        const qrData = `https://flow-ai.vercel.app/?shop=${shopId}`;
-        await QRCode.toFile(filePath, qrData);
-        return res.status(200).json({
-            status: "ok",
-            message: "QR oluşturuldu",
-            qrUrl: `/qr/${shopId}.png`,
-            shopUrl: qrData,
+        const qr = await generateQr(shopId);
+        return res.json({
+            ok: true,
+            qrUrl: `https://ai-shop-backend-2.onrender.com/api/shop/get-qr/${qr.fileName}`,
         });
     }
     catch (err) {
-        console.error(err);
-        return res.status(500).json({ error: "QR oluşturulamadı" });
+        console.error("QR ERROR:", err);
+        res.status(500).json({ error: "QR üretilemedi" });
     }
+});
+// QR dosyası gösterme endpointi
+router.get("/get-qr/:name", (req, res) => {
+    const { name } = req.params;
+    const filePath = path.join("/tmp/qr", name);
+    if (!fs.existsSync(filePath)) {
+        return res.status(404).send("QR bulunamadı");
+    }
+    return res.sendFile(filePath);
 });
 export default router;
