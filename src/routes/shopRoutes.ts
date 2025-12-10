@@ -84,7 +84,7 @@ router.post("/generate-qr", async (req, res) => {
 
     const qrPath = path.join(qrDir, `${shopId}.png`);
 
-    const shopUrl = `https://ai-shop-site.vercel.app/qr/${shopId}`;
+    const shopUrl = `https://ai-shop-site-hwtxl6tr8-serhats-projects-cbfdb63c.vercel.app/shop/${shopId}`;
 
     await QRCode.toFile(qrPath, shopUrl);
 
