@@ -54,7 +54,7 @@ router.post("/generate-qr", async (req, res) => {
     const qrPath = path.join(qrDir, `${shopId}.png`);
 
     // ✔ Yeni frontend linki
-    const shopUrl = `https://flowai-shop-panel-1-49viicxy9-serhats-projects-cbfdb63c.vercel.app/shop/${shopId}`;
+    const shopUrl = `https://flowai-shop-panel-1-2kltxtzoo-serhats-projects-cbfdb63c.vercel.app/shop/${shopId}`;
 
     await QRCode.toFile(qrPath, shopUrl);
 
