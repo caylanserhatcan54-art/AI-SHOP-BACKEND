@@ -3,11 +3,20 @@
     "target": "ES2020",
     "module": "ESNext",
     "moduleResolution": "Node",
-    "allowSyntheticDefaultImports": true,
+    "outDir": "./dist",
+    "allowJs": true,
     "esModuleInterop": true,
-    "outDir": "dist",
+    "resolveJsonModule": true,
     "strict": false,
-    "resolveJsonModule": true
+    "skipLibCheck": true
   },
-  "include": ["src"]
+  "exclude": [
+    "**/node_modules",
+    "**/dist",
+    "my-app",
+    "ai-shop-site",
+    "frontend",
+    "app",
+    "ui"
+  ]
 }
