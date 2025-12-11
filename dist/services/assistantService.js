@@ -263,52 +263,39 @@ function detectStoreCategory(products) {
     if (!products.length)
         return "genel";
     const all = products
-        .map((p) => (p.title || "").toLowerCase())
+        .map((p) => normalizeText(p.title || ""))
         .join(" ");
-    if (all.includes("pantolon") ||
-        all.includes("elbise") ||
-        all.includes("kazak") ||
-        all.includes("gomlek") ||
-        all.includes("gömlek") ||
-        all.includes("etek") ||
-        all.includes("tunik") ||
-        all.includes("ceket"))
+    const has = (words) => words.some(w => all.includes(w));
+    if (has(["elbise", "pantolon", "kazak", "gomlek", "etek", "tunik", "ceket", "sweat", "eşofman"]))
         return "giyim";
-    if (all.includes("ayakkabi") ||
-        all.includes("ayakkabı") ||
-        all.includes("sneaker") ||
-        all.includes("bot") ||
-        all.includes("topuklu"))
+    if (has(["ayakkabi", "sneaker", "bot", "sandlet", "terlik", "topuklu"]))
         return "ayakkabi";
-    if (all.includes("bilgisayar") ||
-        all.includes("laptop") ||
-        all.includes("telefon") ||
-        all.includes("kulaklik") ||
-        all.includes("kulaklık") ||
-        all.includes("televizyon") ||
-        all.includes("monitor") ||
-        all.includes("monitör"))
+    if (has(["telefon", "laptop", "bilgisayar", "kulaklik", "televizyon", "monitor", "tablet", "powerbank"]))
         return "elektronik";
-    if (all.includes("matkap") ||
-        all.includes("vida") ||
-        all.includes("hirdavat") ||
-        all.includes("hırdavat") ||
-        all.includes("tornavida"))
+    if (has(["kilif", "kılıf", "case", "koruyucu", "aksesuar"]))
+        return "telefon-aksesuari";
+    if (has(["parfum", "parfüm", "edp", "edt", "kokusu"]))
+        return "parfum";
+    if (has(["sampuan", "şampuan", "sabun", "deo", "deo", "kolonya", "temizleme", "cilt", "yuz krem", "serum"]))
+        return "kozmetik-bakim";
+    if (has(["deterjan", "yuzey temizleyici", "camasir", "bulaşık", "temizlik", "kir çözücü"]))
+        return "temizlik";
+    if (has(["fırın", "buzdolabi", "çamaşır makinesi", "beyaz esya", "kurutma"]))
+        return "beyaz-esya";
+    if (has(["matkap", "tornavida", "hirdavat", "vida", "anahtar", "pense", "rulo", "macun"]))
         return "hirdavat";
-    if (all.includes("cadir") || all.includes("çadır") || all.includes("kamp"))
+    if (has(["cadir", "kamp", "ocak", "kamp sandalye", "kamp masa"]))
         return "kamp-outdoor";
-    if (all.includes("oyuncak") ||
-        all.includes("lego") ||
-        all.includes("figür") ||
-        all.includes("figuru") ||
-        all.includes("bebek"))
+    if (has(["tencere", "bardak", "tabak", "mutfak", "cakmak", "çatal kaşık"]))
+        return "mutfak";
+    if (has(["oyuncak", "lego", "bebek", "figür", "oyun seti"]))
         return "oyuncak";
-    if (all.includes("dumbbell") ||
-        all.includes("halter") ||
-        all.includes("kosu bandi") ||
-        all.includes("koşu bandı") ||
-        all.includes("fitness"))
+    if (has(["dumbbell", "halter", "fitness", "koşu", "yoga"]))
         return "spor";
+    if (has(["paspas", "hali", "kilim", "perde", "dekor", "vazo", "çerçeve"]))
+        return "ev-dekorasyon";
+    if (has(["koltuk", "masa", "sandalye", "gardrop", "yatak"]))
+        return "mobilya";
     return "genel";
 }
 /**
@@ -451,7 +438,41 @@ function detectIntent(msg) {
         t.includes("memnun değil") ||
         t.includes("cok kotu") ||
         t.includes("hayal kirikligi"))
-        return "COMPLAINT";
+        // Ek niyetler — benzer ürün, daha ucuz, daha iyi, hediye vb.
+        // Benzer / alternatif ürün isteği
+        if (t.includes("benzer") ||
+            t.includes("alternatif") ||
+            t.includes("baska model") ||
+            t.includes("baska urun") ||
+            t.includes("baska ne var")) {
+            return "ASK_RECOMMENDATION";
+        }
+    // Daha ucuz ürün isteği
+    if (t.includes("daha ucuz") ||
+        t.includes("ucuz olan") ||
+        t.includes("fiyati dusuk") ||
+        t.includes("butceme uygun")) {
+        return "ASK_RECOMMENDATION";
+    }
+    // Daha kaliteli / üst seviye istek
+    if (t.includes("daha iyi") ||
+        t.includes("daha kaliteli") ||
+        t.includes("ust seviye") ||
+        t.includes("bir ust model")) {
+        return "ASK_RECOMMENDATION";
+    }
+    // Aynı ürünün farklı rengi
+    if ((t.includes("aynisi") || t.includes("ayni urun")) &&
+        (t.includes("rengi") || t.includes("renk"))) {
+        return "ASK_COLOR";
+    }
+    // Hediye niyeti
+    if (t.includes("hediye") ||
+        t.includes("hediyelik") ||
+        t.includes("hediye alinirmi") ||
+        t.includes("hediye olur mu")) {
+        return "ASK_SUITABILITY";
+    }
     return "UNKNOWN";
 }
 /* ----------------------------------------------
@@ -491,24 +512,55 @@ function detectMultipleIntents(msg) {
  */
 function findMatchingProducts(msg, products) {
     const normMsg = normalizeText(msg);
-    const tokens = normMsg
-        .split(" ")
-        .filter((t) => t.length > 2 && !TURKISH_STOP_WORDS.includes(t) && t.trim().length > 0);
-    if (!tokens.length)
+    if (!products.length)
+        return [];
+    const tokens = normMsg.split(" ").filter(t => t.length > 2);
+    // Müşteri hiç ürün ismi belirtmediyse → en popüler 5 ürünü ver
+    if (tokens.length === 0)
         return products.slice(0, 5);
     const scored = [];
     for (const p of products) {
         const title = normalizeText(p.title || "");
+        const category = normalizeText(p.category || "");
+        const price = p.price ? parseInt(String(p.price).replace(/\D/g, "")) : 0;
         let score = 0;
+        // Başlık eşleşmesi — en yüksek puan
         for (const token of tokens) {
             if (title.includes(token))
-                score += 2;
+                score += 10;
         }
+        // Kategori eşleşmesi
+        for (const token of tokens) {
+            if (category.includes(token))
+                score += 6;
+        }
+        // Renk kelimeleri
+        if (normMsg.includes("siyah") && title.includes("siyah"))
+            score += 4;
+        if (normMsg.includes("beyaz") && title.includes("beyaz"))
+            score += 4;
+        if (normMsg.includes("gri") && title.includes("gri"))
+            score += 4;
+        if (normMsg.includes("kirmizi") && title.includes("kirmizi"))
+            score += 4;
+        // Fiyat niyeti (ucuz / pahalı)
+        if (normMsg.includes("ucuz") && price < 300)
+            score += 3;
+        if (normMsg.includes("pahali") && price > 1500)
+            score += 3;
+        // Genel kelimeler
+        if (normMsg.includes("ayakkabi") && title.includes("spor"))
+            score += 5;
+        if (normMsg.includes("kazan") && title.includes("kazak"))
+            score += 5;
+        // Benzersiz puan
         if (score > 0)
             scored.push({ product: p, score });
     }
+    // Puan sıralama
     scored.sort((a, b) => b.score - a.score);
-    return scored.slice(0, 5).map((s) => s.product);
+    // En iyi 5 ürün
+    return scored.slice(0, 5).map(s => s.product);
 }
 /**
  * Ürün özet formatı

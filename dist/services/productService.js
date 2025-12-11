@@ -3,16 +3,21 @@ import firestoreAdmin from "../config/firebase-admin.js";
 /**
  * Basit normalize: küçük harf, aksan vs temizleme
  */
-export function normalizeText(text) {
-    return (text || "")
+export function normalizeText(str) {
+    if (!str)
+        return "";
+    return str
         .toLowerCase()
+        // Türkçe karakter dönüştürme
+        .replace(/ç/g, "c")
         .replace(/ğ/g, "g")
-        .replace(/ü/g, "u")
-        .replace(/ş/g, "s")
         .replace(/ı/g, "i")
         .replace(/ö/g, "o")
-        .replace(/ç/g, "c")
-        .replace(/[^\p{L}\p{N}\s]/gu, " ")
+        .replace(/ş/g, "s")
+        .replace(/ü/g, "u")
+        // Gereksiz karakterleri temizle
+        .replace(/[^a-z0-9\s]/g, " ")
+        // Boşlukları düzenle
         .replace(/\s+/g, " ")
         .trim();
 }
