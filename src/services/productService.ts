@@ -210,11 +210,33 @@ export function detectBrandGuess(title: string): string | undefined {
    TÜM PLATFORM ÜRÜNLERİNİ FIRESTORE'DAN ÇEK
 ------------------------------------------------------------- */
 export async function getProductsForShop(shopId: string): Promise<Product[]> {
-  const platforms = ["trendyol", "hepsiburada", "n11", "amazon", "amazontr", "ciceksepeti"];
 
+  // 1) Mağaza hangi platformları kullanıyor? (ayarlar/platformlar)
+  const settingsSnap = await db
+    .collection("magazalar")
+    .doc(shopId)
+    .collection("ayarlar")
+    .doc("platformlar")
+    .get();
+
+  const settings = settingsSnap.data() || {};
+  const activePlatforms: string[] = settings.aktifPlatformlar || [];
+
+  console.log("🔍 Aktif platformlar:", activePlatforms);
+
+  // Eğer mağaza hiçbir platform seçmediyse:
+  if (activePlatforms.length === 0) {
+    console.log("⛔ Aktif platform bulunamadı:", shopId);
+    return [];
+  }
+
+
+  // 2) Ürünleri toplayacağımız liste
   const products: Product[] = [];
 
-  for (const platform of platforms) {
+
+  // 3) Sadece aktif platformlardan ürün çek
+  for (const platform of activePlatforms) {
     const snap = await db
       .collection("magazalar")
       .doc(shopId)
