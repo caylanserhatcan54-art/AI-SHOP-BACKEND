@@ -211,15 +211,15 @@ router.get("/:shopId", (req, res) => {
     addBubble(data.reply || "Bir hata oluştu ❌", "ai");
   }
 
-  // Mağaza adı
-  fetch("https://ai-shop-backend-2.onrender.com/api/shop/public/${shopId}")
-    .then(r => r.json())
-    .then(d => {
-      if (d.ok) {
-        document.getElementById("shopName").innerText =
-  data.shop.shopName + " – Alışverişte ";
-      }
-    });
+  // Mağaza adını çek
+fetch("https://ai-shop-backend-2.onrender.com/api/shop/public/" + shopId)
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      document.getElementById("shopName").innerText =
+        data.shop.shopName + " – Alışveriş Yapay Zekanız";
+    }
+  });
 </script>
 
 </body>
