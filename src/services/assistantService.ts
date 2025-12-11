@@ -6,6 +6,41 @@ import {
   normalizeText,
 } from "./productService.js";
 
+/* ----------------------------------------------------
+   FRONTEND KART FORMATLAYICI (YENİ EKLEDİK)
+---------------------------------------------------- */
+function formatProductsForFrontend(products: Product[]) {
+  return products.slice(0, 4).map((p) => ({
+    title: p.title,
+    price: p.price || "",
+    url: p.url || "",
+    imageUrl: p.imageUrl || "",
+  }));
+}
+
+/* ----------------------------------------------------
+   FRONTEND’E JSON FORMATINDA CEVAP DÖNEN YENİ FUNK.
+---------------------------------------------------- */
+export async function processChatMessage(shopId: string, message: string) {
+  const products = await getProductsForShop(shopId);
+
+  // 🔥 Asıl akıllı cevap motoru
+  const aiReply = await generateSmartReply(shopId, message);
+
+  // 🔥 Frontend ürün kartları
+  let matchedProducts = [];
+
+  if (products && products.length > 0) {
+    matchedProducts = formatProductsForFrontend(products);
+  }
+
+  return {
+    reply: aiReply,
+    products: matchedProducts,
+  };
+}
+
+
 /* ----------------------------------------------
  * CUSTOMER MEMORY ENGINE
  * ---------------------------------------------- */

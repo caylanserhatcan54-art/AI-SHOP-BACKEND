@@ -1,8 +1,9 @@
+// src/routes/assistant.js
 import { Router } from "express";
-import { getAssistantReply } from "../services/assistantService.js";
+import { processChatMessage } from "../services/assistantService.js";
 const router = Router();
 /**
- * GERÇEK YAPAY ZEKA CEVABI
+ * YAPAY ZEKA + ÜRÜN SİSTEMİ
  * Endpoint: POST /api/assistant/chat
  */
 router.post("/chat", async (req, res) => {
@@ -14,11 +15,12 @@ router.post("/chat", async (req, res) => {
                 reply: "shopId ve message zorunludur!"
             });
         }
-        // 🔥 GERÇEK YAPAY ZEKA CEVABI
-        const reply = await getAssistantReply(shopId, message);
+        // 🔥 Hem AI cevabı hem ürünler burada hazırlanıyor
+        const result = await processChatMessage(shopId, message);
         return res.json({
             ok: true,
-            reply,
+            reply: result.reply, // Yapay zeka cevabı
+            products: result.products // Ürün listesi (resim + link + fiyat)
         });
     }
     catch (err) {
