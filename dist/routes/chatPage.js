@@ -217,7 +217,7 @@ router.get("/:shopId", (req, res) => {
     .then(d => {
       if (d.ok) {
         document.getElementById("shopName").innerText =
-  data.shop.shopName + " – Alışverişte Yapay Zekan";
+  data.shop.shopName + " – Alışverişte ";
       }
     });
 </script>
