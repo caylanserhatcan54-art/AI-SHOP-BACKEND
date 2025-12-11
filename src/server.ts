@@ -19,22 +19,21 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+// STATIC FILES (ÖNEMLİ!!!)
+app.use(express.static(path.join(process.cwd(), "public")));
 
 // ROUTES
 app.use("/api/assistant", assistantRouter);
 app.use("/api/shop", shopRoutes);
 app.use("/chat", chatPage);
 
-
 // STATIC QR SERVING
 app.use("/qr", express.static(path.join(process.cwd(), "public", "qr")));
-
 
 // DEFAULT TEST ROUTE
 app.get("/", (req, res) => {
   res.send("Backend aktif ✔ QR aktif ✔ Assistant aktif 🤖");
 });
-
 
 // SERVER LISTEN
 const PORT = process.env.PORT || 4000;

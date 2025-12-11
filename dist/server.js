@@ -14,6 +14,8 @@ const app = express();
 // MIDDLEWARES
 app.use(cors());
 app.use(express.json());
+// STATIC FILES (ÖNEMLİ!!!)
+app.use(express.static(path.join(process.cwd(), "public")));
 // ROUTES
 app.use("/api/assistant", assistantRouter);
 app.use("/api/shop", shopRoutes);
