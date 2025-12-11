@@ -210,33 +210,11 @@ export function detectBrandGuess(title: string): string | undefined {
    TÜM PLATFORM ÜRÜNLERİNİ FIRESTORE'DAN ÇEK
 ------------------------------------------------------------- */
 export async function getProductsForShop(shopId: string): Promise<Product[]> {
+  const platforms = ["trendyol", "hepsiburada", "n11", "amazon", "ciceksepeti"];
 
-  // 1) Mağaza hangi platformları kullanıyor? (ayarlar/platformlar)
-  const settingsSnap = await db
-    .collection("magazalar")
-    .doc(shopId)
-    .collection("ayarlar")
-    .doc("platformlar")
-    .get();
-
-  const settings = settingsSnap.data() || {};
-  const activePlatforms: string[] = settings.aktifPlatformlar || [];
-
-  console.log("🔍 Aktif platformlar:", activePlatforms);
-
-  // Eğer mağaza hiçbir platform seçmediyse:
-  if (activePlatforms.length === 0) {
-    console.log("⛔ Aktif platform bulunamadı:", shopId);
-    return [];
-  }
-
-
-  // 2) Ürünleri toplayacağımız liste
   const products: Product[] = [];
 
-
-  // 3) Sadece aktif platformlardan ürün çek
-  for (const platform of activePlatforms) {
+  for (const platform of platforms) {
     const snap = await db
       .collection("magazalar")
       .doc(shopId)
@@ -245,31 +223,23 @@ export async function getProductsForShop(shopId: string): Promise<Product[]> {
       .collection("urunler")
       .get();
 
+    if (snap.empty) continue;
+
     snap.forEach((docSnap) => {
       const data = docSnap.data() || {};
 
-      const title = data.baslik || data.title || "";
-      const price = data.fiyat || data.price;
-      const url = data.URL || data.url;
-      const imageUrl =
-        data.image || data.imageUrl || data.image_url || data.images;
-
-      const category = detectCategoryFromTitle(title);
-      const color = detectColorFromTitle(title);
-      const materialGuess = detectMaterialGuess(title);
-      const brandGuess = detectBrandGuess(title);
-
       products.push({
         id: docSnap.id,
-        title,
-        price,
-        url,
-        imageUrl,
+        title: data.baslik || data.title || "",
+        price: data.fiyat || data.price,
+        url: data.URL || data.url,
+        imageUrl:
+          data.image || data.imageUrl || data.image_url || data.images,
         platform,
-        category,
-        color,
-        materialGuess,
-        brandGuess,
+        category: detectCategoryFromTitle(data.baslik || data.title || ""),
+        color: detectColorFromTitle(data.baslik || data.title || ""),
+        materialGuess: detectMaterialGuess(data.baslik || data.title || ""),
+        brandGuess: detectBrandGuess(data.baslik || data.title || ""),
         rawData: data,
       });
     });
