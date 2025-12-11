@@ -1,27 +1,28 @@
 import { Router } from "express";
-import { generateQr } from "../utils/generateQr.js";
+import { db } from "../config/firebaseAdmin.js";
 
 const router = Router();
 
-// QR üretme endpointi
-router.post("/generate-qr", async (req, res) => {
+router.post("/chat", async (req, res) => {
   try {
-    const { shopId } = req.body;
+    const { shopId, message } = req.body;
 
-    if (!shopId) {
-      return res.status(400).json({ error: "shopId gerekli" });
+    if (!shopId || !message) {
+      return res.status(400).json({ ok: false, msg: "Eksik bilgi!" });
     }
 
-    const fileName = await generateQr(shopId);
+    // Basit yapay zeka placeholder cevabı (istersen gerçek AI bağlarız)
+    const reply =
+      "Bu mağaza için yapay zeka konuşma sistemi henüz bağlanmadı. Mesajınız: " +
+      message;
 
     return res.json({
       ok: true,
-      shopId,
-      qrUrl: `https://ai-shop-backend-2.onrender.com/qr/${fileName}`,
+      reply,
     });
-  } catch (error) {
-    console.log("QR ERROR:", error);
-    return res.status(500).json({ error: "QR üretilemedi" });
+  } catch (err) {
+    console.error("CHAT ERROR:", err);
+    return res.status(500).json({ ok: false, msg: "Sunucu hatası!" });
   }
 });
 
