@@ -7,7 +7,7 @@ import { dirname } from "path";
 import path from "path";
 
 import assistantRouter from "./routes/assistant.js";
-import shopRoutes from "./routes/shopRoutes.js";
+import shopRoutes from "./routes/shopRoutes";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
