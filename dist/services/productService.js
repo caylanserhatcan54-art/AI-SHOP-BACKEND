@@ -1,29 +1,26 @@
 // src/services/productService.ts
-import firestoreAdmin from "../config/firebase-admin.js";
-/**
- * Basit normalize: küçük harf, aksan vs temizleme
- */
+import { db } from "../config/firebaseAdmin.js";
+/* -------------------------------------------------------------
+   FULL NORMALIZE (Türkçe destekli)
+------------------------------------------------------------- */
 export function normalizeText(str) {
     if (!str)
         return "";
     return str
         .toLowerCase()
-        // Türkçe karakter dönüştürme
         .replace(/ç/g, "c")
         .replace(/ğ/g, "g")
         .replace(/ı/g, "i")
         .replace(/ö/g, "o")
         .replace(/ş/g, "s")
         .replace(/ü/g, "u")
-        // Gereksiz karakterleri temizle
         .replace(/[^a-z0-9\s]/g, " ")
-        // Boşlukları düzenle
         .replace(/\s+/g, " ")
         .trim();
 }
-/**
- * Başlıktan renk tahmini
- */
+/* -------------------------------------------------------------
+   Renk tahmini
+------------------------------------------------------------- */
 export function detectColorFromTitle(title) {
     const t = normalizeText(title);
     const colors = [
@@ -61,9 +58,9 @@ export function detectColorFromTitle(title) {
     }
     return undefined;
 }
-/**
- * Başlıktan kategori tahmini (giyim, ayakkabı, elektronik, oyuncak, kamp, hırdavat, vb.)
- */
+/* -------------------------------------------------------------
+   Kategori tahmini
+------------------------------------------------------------- */
 export function detectCategoryFromTitle(title) {
     const t = normalizeText(title);
     if (t.includes("polo") ||
@@ -76,16 +73,14 @@ export function detectCategoryFromTitle(title) {
         t.includes("etek") ||
         t.includes("elbise") ||
         t.includes("pantolon") ||
-        t.includes("ceket")) {
+        t.includes("ceket"))
         return "giyim";
-    }
     if (t.includes("ayakkabi") ||
         t.includes("sneaker") ||
         t.includes("bot") ||
         t.includes("sandalet") ||
-        t.includes("terlik")) {
+        t.includes("terlik"))
         return "ayakkabi";
-    }
     if (t.includes("laptop") ||
         t.includes("notebook") ||
         t.includes("bilgisayar") ||
@@ -96,108 +91,85 @@ export function detectCategoryFromTitle(title) {
         t.includes("smartphone") ||
         t.includes("kulaklik") ||
         t.includes("televizyon") ||
-        t.includes("tv") ||
         t.includes("tablet") ||
         t.includes("ssd") ||
-        t.includes("ram")) {
+        t.includes("ram"))
         return "elektronik";
-    }
     if (t.includes("oyuncak") ||
         t.includes("lego") ||
         t.includes("bebek") ||
         t.includes("figur") ||
-        t.includes("araba oyuncak")) {
+        t.includes("araba oyuncak"))
         return "oyuncak";
-    }
     if (t.includes("cadir") ||
         t.includes("kamp") ||
         t.includes("mat") ||
         t.includes("uyku tulumu") ||
-        t.includes("tirmik") ||
         t.includes("outdoor") ||
-        t.includes("trekking")) {
+        t.includes("trekking"))
         return "kamp-outdoor";
-    }
-    if (t.includes("matar") ||
-        t.includes("su sporu") ||
-        t.includes("dalis") ||
-        t.includes("maske") ||
-        t.includes("palet") ||
-        t.includes("can yelek")) {
-        return "su-sporlari";
-    }
     if (t.includes("matkap") ||
         t.includes("vida") ||
         t.includes("tornavida") ||
         t.includes("anahtar takimi") ||
         t.includes("hirdavat") ||
         t.includes("pense") ||
-        t.includes("civi")) {
+        t.includes("civi"))
         return "hirdavat";
-    }
     if (t.includes("top") ||
         t.includes("forma") ||
         t.includes("spor") ||
         t.includes("dumbbell") ||
-        t.includes("kosu bandi") ||
-        t.includes("fitness")) {
+        t.includes("fitness"))
         return "spor";
-    }
-    // Default: genel
     return "genel";
 }
-/**
- * Baslıktan materyal/kalite hakkında tahmini yorum etiketi
- */
+/* -------------------------------------------------------------
+   Materyal tahmini
+------------------------------------------------------------- */
 export function detectMaterialGuess(title) {
     const t = normalizeText(title);
-    if (t.includes("pamuk") || t.includes("cotton")) {
+    if (t.includes("pamuk") || t.includes("cotton"))
         return "Pamuk ağırlıklı, yumuşak ve nefes alabilen bir kumaş gibi duruyor.";
-    }
-    if (t.includes("polyester")) {
+    if (t.includes("polyester"))
         return "Polyester ağırlıklı, dayanıklı ve kolay kırışmayan bir yapıda görünüyor.";
-    }
-    if (t.includes("deri") || t.includes("leather")) {
+    if (t.includes("deri") || t.includes("leather"))
         return "Deri yapıda, uzun ömürlü ve şık bir ürün gibi duruyor.";
-    }
     if (t.includes("celik") ||
         t.includes("steel") ||
         t.includes("aluminyum") ||
-        t.includes("aluminium")) {
+        t.includes("aluminium"))
         return "Metal/çelik malzemeden, sağlam ve dayanıklı bir ürün gibi görünüyor.";
-    }
     return undefined;
 }
-/**
- * Marka tahmini (çok basic, baştaki kelimeden vb.)
- */
+/* -------------------------------------------------------------
+   Basit marka tahmini
+------------------------------------------------------------- */
 export function detectBrandGuess(title) {
-    const firstWord = (title || "").split(" ")[0];
+    const firstWord = title.split(" ")[0];
     if (!firstWord)
         return undefined;
-    // Under Armour, Nike, Samsung gibi markalar genelde başta olur
-    if (firstWord.length > 2 && firstWord[0] === firstWord[0].toUpperCase()) {
+    if (firstWord[0] === firstWord[0].toUpperCase() && firstWord.length > 2) {
         return firstWord;
     }
     return undefined;
 }
-/**
- * Mağazaya ait TÜM platformlardaki ürünleri çeker:
- * /magazalar/{shopId}/platformlar/{platform}/urunler/*
- */
+/* -------------------------------------------------------------
+   TÜM PLATFORM ÜRÜNLERİNİ FIRESTORE'DAN ÇEK
+------------------------------------------------------------- */
 export async function getProductsForShop(shopId) {
     const platforms = ["trendyol", "hepsiburada", "n11", "amazon", "amazontr", "ciceksepeti"];
     const products = [];
     for (const platform of platforms) {
-        const snap = await firestoreAdmin
+        const snap = await db
             .collection("magazalar")
             .doc(shopId)
             .collection("platformlar")
             .doc(platform)
             .collection("urunler")
             .get();
-        snap.forEach((doc) => {
-            const data = doc.data() || {};
+        snap.forEach((docSnap) => {
+            const data = docSnap.data() || {};
             const title = data.baslik || data.title || "";
             const price = data.fiyat || data.price;
             const url = data.URL || data.url;
@@ -207,7 +179,7 @@ export async function getProductsForShop(shopId) {
             const materialGuess = detectMaterialGuess(title);
             const brandGuess = detectBrandGuess(title);
             products.push({
-                id: doc.id,
+                id: docSnap.id,
                 title,
                 price,
                 url,

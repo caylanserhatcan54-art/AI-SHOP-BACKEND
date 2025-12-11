@@ -1,57 +1,41 @@
+// src/routes/productImport.ts
 import { Router } from "express";
-import { getFirestore, doc, getDoc, setDoc } from "firebase/firestore";
+import admin, { db } from "../config/firebaseAdmin.js";
 const router = Router();
-const db = getFirestore();
-// Domain
-const CLIENT_BASE_URL = process.env.CLIENT_BASE_URL || "https://flowai.com";
-// -------------------------------------------------------
-// SHOP CREATE
-// -------------------------------------------------------
-router.post("/create", async (req, res) => {
+/**
+ * Ürün import — Chrome extension buraya POST atıyor
+ */
+router.post("/import", async (req, res) => {
     try {
-        const { shopId, shopName, platform } = req.body;
-        if (!shopId || !shopName || !platform) {
-            return res.json({ ok: false, msg: "Eksik bilgi!" });
+        const { shopId, platform, products } = req.body;
+        if (!shopId || !platform || !products) {
+            return res.json({ ok: false, msg: "Eksik bilgi gönderildi!" });
         }
-        const shopRef = doc(db, "magazalar", shopId);
-        await setDoc(shopRef, {
-            shopId,
-            shopName,
-            platform,
-            shopUrl: `${CLIENT_BASE_URL}/${shopId}`,
-            createdAt: Date.now(),
+        // Firestore batch
+        const batch = db.batch();
+        products.forEach((p) => {
+            const ref = db
+                .collection("magazalar")
+                .doc(shopId)
+                .collection("platformlar")
+                .doc(platform)
+                .collection("urunler")
+                .doc(p.id || admin.firestore().collection("_").doc().id);
+            batch.set(ref, p, { merge: true });
         });
+        await batch.commit();
         return res.json({
             ok: true,
-            msg: "Shop oluşturuldu ✔",
-            shopUrl: `${CLIENT_BASE_URL}/${shopId}`,
+            msg: "Ürünler Firestore’a başarıyla aktarıldı ✔",
+            count: products.length,
         });
     }
     catch (err) {
-        console.error("CREATE ERROR:", err);
-        return res.json({ ok: false, msg: "Shop create failed" });
-    }
-});
-// -------------------------------------------------------
-// PUBLIC SHOP GET
-// -------------------------------------------------------
-router.get("/public/:shopId", async (req, res) => {
-    try {
-        const { shopId } = req.params;
-        const shopRef = doc(db, "magazalar", shopId);
-        const snap = await getDoc(shopRef);
-        if (!snap.exists()) {
-            return res.json({ ok: false, msg: "Shop bulunamadı ❌" });
-        }
+        console.error("IMPORT ERROR:", err);
         return res.json({
-            ok: true,
-            shop: snap.data(),
+            ok: false,
+            msg: "Ürün import sırasında hata oluştu",
         });
     }
-    catch (err) {
-        console.error("PUBLIC ERROR:", err);
-        return res.json({ ok: false, msg: "Shop okunamadı" });
-    }
 });
-// -------------------------------------------------------
 export default router;

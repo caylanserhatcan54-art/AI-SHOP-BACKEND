@@ -1,35 +1,39 @@
-import firestoreAdmin from "../config/firebase-admin.js";
+// src/services/memoryService.ts
+import admin, { db } from "../config/firebaseAdmin.js";
 
-const db = firestoreAdmin;
-
+/**
+ * Kullanıcı hafızasını güncelle (kategoriler, renkler, mesajlar vs.)
+ */
 export async function updateUserMemory(
   shopId: string,
   userMessage: string,
-  userId?: string
+  userId: string = "anonymous"
 ): Promise<void> {
-  if (!userId) userId = "anonymous"; // Chrome ext ile alacağız
-
+  
+  // Firestore referansı
   const ref = db
-    .collection("memories")
+    .collection("magazalar")
     .doc(shopId)
-    .collection("users")
+    .collection("memory")
     .doc(userId);
 
   const now = Date.now();
 
-  const current = await ref.get();
-  const prev = current.exists ? current.data() : {};
+  const snap = await ref.get();
+  const prev = snap.exists ? snap.data() : {};
 
-  let preferredCategories = prev.preferredCategories || [];
-  let preferredColors = prev.preferredColors || [];
+  let preferredCategories: string[] = prev.preferredCategories || [];
+  let preferredColors: string[] = prev.preferredColors || [];
 
-  const lower = userMessage.toLowerCase();
+  const msg = userMessage.toLowerCase();
 
-  if (lower.includes("ayakkabı")) preferredCategories.push("ayakkabi");
-  if (lower.includes("mont") || lower.includes("elbise"))
-    preferredCategories.push("giyim");
-  if (lower.includes("siyah")) preferredColors.push("siyah");
-  if (lower.includes("beyaz")) preferredColors.push("beyaz");
+  // --- Basit kategori çıkarsama ---
+  if (msg.includes("ayakkabı")) preferredCategories.push("ayakkabi");
+  if (msg.includes("mont") || msg.includes("elbise")) preferredCategories.push("giyim");
+
+  // --- Renk çıkarsama ---
+  if (msg.includes("siyah")) preferredColors.push("siyah");
+  if (msg.includes("beyaz")) preferredColors.push("beyaz");
 
   await ref.set(
     {
@@ -43,13 +47,17 @@ export async function updateUserMemory(
   );
 }
 
-export async function getUserMemory(shopId: string, userId?: string) {
-  if (!userId) userId = "anonymous";
-
+/**
+ * Kullanıcı hafızasını getir
+ */
+export async function getUserMemory(
+  shopId: string,
+  userId: string = "anonymous"
+) {
   const ref = db
-    .collection("memories")
+    .collection("magazalar")
     .doc(shopId)
-    .collection("users")
+    .collection("memory")
     .doc(userId);
 
   const doc = await ref.get();

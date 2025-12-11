@@ -1,26 +1,51 @@
+// src/routes/productImport.ts
+
 import { Router } from "express";
-import firestoreAdmin from "../config/firebase-admin.js";
+import admin, { db } from "../config/firebaseAdmin.js";
 
 const router = Router();
 
-// ürün importu (örnek endpoint)
+/**
+ * Ürün import — Chrome extension buraya POST atıyor
+ * Endpoint: POST /api/import/:shopId
+ */
 router.post("/:shopId", async (req, res) => {
   const { shopId } = req.params;
-  const productData = req.body;
+  const { platform, product } = req.body;
+
+  if (!platform || !product) {
+    return res.status(400).json({
+      ok: false,
+      msg: "platform ve product gönderilmesi zorunludur!",
+    });
+  }
 
   try {
-    await firestoreAdmin
+    // Eğer ürün id yoksa Firestore random doc id üretelim:
+    const productId = product.id || db.collection("_").doc().id;
+
+    const ref = db
       .collection("magazalar")
       .doc(shopId)
+      .collection("platformlar")
+      .doc(platform)
       .collection("urunler")
-      .add(productData);
+      .doc(productId);
 
-    res.json({
-      message: "Ürün başarıyla kaydedildi",
+    await ref.set(product, { merge: true });
+
+    return res.json({
+      ok: true,
+      msg: "Ürün başarıyla kaydedildi ✔",
+      productId,
     });
+
   } catch (error) {
-    console.log(error);
-    res.status(500).json({ error: "Ürün kaydı sırasında hata oluştu." });
+    console.error("IMPORT ERROR:", error);
+    return res.status(500).json({
+      ok: false,
+      msg: "Ürün kaydı sırasında hata oluştu ❌",
+    });
   }
 });
 
