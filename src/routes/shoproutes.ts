@@ -1,8 +1,8 @@
 // src/routes/shoproutes.ts
 import { Router } from "express";
 import QRCode from "qrcode";
-import fs from "fs";
 import path from "path";
+import fs from "fs";
 import { db } from "../config/firebaseAdmin.js";
 
 const router = Router();
@@ -10,27 +10,31 @@ const router = Router();
 const CLIENT_BASE_URL =
   process.env.CLIENT_BASE_URL || "https://flowai-client.vercel.app";
 
-/* ============================
-   SHOP CREATE
-============================ */
+
+// --------------------------
+// SHOP CREATE
+// --------------------------
 router.post("/create", async (req, res) => {
   try {
-    const { shopId, shopName, platform } = req.body;
+    const { shopId, shopName } = req.body;
 
-    if (!shopId || !shopName || !platform) {
+    if (!shopId || !shopName) {
       return res.json({ ok: false, msg: "Eksik bilgi!" });
     }
 
     const shopUrl = `${CLIENT_BASE_URL}/shop/${shopId}`;
 
-    await db.collection("magazalar").doc(shopId).set({
-      shopId,
-      shopName,
-      platform,
-      shopUrl,
-      createdAt: Date.now(),
-    });
+    await db.collection("magazalar").doc(shopId).set(
+      {
+        shopId,
+        shopName,
+        shopUrl,
+        updatedAt: Date.now(),
+      },
+      { merge: true }
+    );
 
+    // QR üret
     const qrDir = path.join(process.cwd(), "public", "qr");
     if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
 
@@ -39,22 +43,22 @@ router.post("/create", async (req, res) => {
 
     return res.json({
       ok: true,
-      msg: "Shop oluşturuldu ✔",
       shopUrl,
       qrUrl: `https://ai-shop-backend-2.onrender.com/qr/${shopId}.png`,
     });
   } catch (err) {
-    console.error("SHOP CREATE ERROR:", err);
-    return res.json({ ok: false, msg: "Shop create failed" });
+    console.error(err);
+    return res.json({ ok: false, msg: "Shop oluşturulamadı" });
   }
 });
 
-// -------------------------------------------------------
-//  PUBLIC SHOP GET
-// -------------------------------------------------------
+
+// --------------------------
+// SHOP GET (FRONTEND BURAYI KULLANIYOR)
+// --------------------------
 router.get("/public/:shopId", async (req, res) => {
   try {
-    const { shopId } = req.params;
+    const shopId = req.params.shopId;
 
     const snap = await db.collection("magazalar").doc(shopId).get();
 
@@ -66,10 +70,9 @@ router.get("/public/:shopId", async (req, res) => {
       ok: true,
       shop: snap.data(),
     });
-
   } catch (err) {
-    console.error("PUBLIC ERROR:", err);
-    return res.json({ ok: false, msg: "Shop okunamadı" });
+    console.error(err);
+    return res.json({ ok: false, msg: "Shop okunamadı!" });
   }
 });
 
