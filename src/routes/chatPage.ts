@@ -18,8 +18,8 @@ router.get("/:shopId", (req, res) => {
   body {
     margin: 0;
     height: 100vh;
-    background: #1a1a1a;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: #1f1f1f;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
     display: flex;
     flex-direction: column;
     color: white;
@@ -30,7 +30,7 @@ router.get("/:shopId", (req, res) => {
     text-align: center;
     font-size: 18px;
     font-weight: 600;
-    background: #222;
+    background: #262626;
     border-bottom: 1px solid #333;
   }
 
@@ -43,34 +43,16 @@ router.get("/:shopId", (req, res) => {
     gap: 14px;
   }
 
-  .suggestions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 10px;
-  }
-
-  .suggestion-btn {
-    padding: 10px 14px;
-    background: #2d2d2d;
-    border-radius: 14px;
-    font-size: 14px;
-    cursor: pointer;
-    border: 1px solid #3a3a3a;
-    color: #8be0ff;
-    transition: 0.2s;
-  }
-  .suggestion-btn:hover { background: #333; }
-
   .bubble-ai {
     max-width: 80%;
     padding: 14px 18px;
-    background: #2c2c2c;
+    background: #2f2f2f;
     border-radius: 16px;
     border-top-left-radius: 4px;
-    color: #e6e6e6;
     font-size: 15px;
     line-height: 1.5;
+    color: #e8e8e8;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
   }
 
   .bubble-user {
@@ -80,13 +62,15 @@ router.get("/:shopId", (req, res) => {
     background: #4c8bf5;
     border-radius: 16px;
     border-top-right-radius: 4px;
-    color: white;
     font-size: 15px;
+    color: white;
+    line-height: 1.5;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
   }
 
   .input-box {
     padding: 14px;
-    background: #222;
+    background: #262626;
     border-top: 1px solid #333;
     display: flex;
     gap: 10px;
@@ -97,7 +81,8 @@ router.get("/:shopId", (req, res) => {
     background: #333;
     border: none;
     padding: 14px;
-    border-radius: 22px;
+    border-radius: 24px;
+    outline: none;
     color: white;
     font-size: 15px;
   }
@@ -108,27 +93,17 @@ router.get("/:shopId", (req, res) => {
     background: #4c8bf5;
     border-radius: 50%;
     border: none;
-    font-size: 20px;
     color: white;
-    cursor: pointer;
+    font-size: 18px;
   }
 </style>
 </head>
+
 <body>
 
-<div class="header" id="shopName">Yükleniyor...</div>
+<div class="header" id="shopName">Alışveriş'te Yapay Zekanız</div>
 
-<div class="chat" id="chat">
-
-  <div class="suggestions" id="suggestions">
-    <div class="suggestion-btn" onclick="quickAsk('Kombin önerisi verir misin?')">🧥 Kombin Önerisi</div>
-    <div class="suggestion-btn" onclick="quickAsk('Bana ürün önerir misin?')">🛍️ Ürün Önerisi</div>
-    <div class="suggestion-btn" onclick="quickAsk('Bu mağazada ne var?')">📦 Ürünlere Bak</div>
-    <div class="suggestion-btn" onclick="quickAsk('Fiyat performans ürünü öner')">💎 FP Ürün Öner</div>
-    <div class="suggestion-btn" onclick="quickAsk('Yeni gelenler neler?')">✨ Yeni Gelenler</div>
-  </div>
-
-</div>
+<div class="chat" id="chat"></div>
 
 <div class="input-box">
   <input id="msgInput" type="text" placeholder="Alışveriş için hazırım, sorunuzu yazın 🛍️" />
@@ -148,40 +123,25 @@ router.get("/:shopId", (req, res) => {
     chat.scrollTop = chat.scrollHeight;
   }
 
-  // 🔥 MAĞAZA ADINI GETİR
-  fetch("https://ai-shop-backend-2.onrender.com/api/shop/public/" + shopId)
+  // Mağaza adını çek
+  fetch("https://ai-shop-backend-2.onrender.com/api/shop/public/${shopId}")
     .then(r => r.json())
     .then(data => {
-      if (data.ok && data.shop && data.shop.shopName) {
+      if (data.ok) {
         document.getElementById("shopName").innerText =
           data.shop.shopName + " – Alışveriş'te Yapay Zekanız";
-      } else {
-        document.getElementById("shopName").innerText = "Mağaza bulunamadı ❌";
       }
     });
 
-  // AI karşılama mesajı
   addBubble("Merhaba 👋 Nasıl yardımcı olabilirim?", "ai");
 
-  // 🔥 Hızlı soru balonları → otomatik sor
-  function quickAsk(txt) {
-    addBubble(txt, "user");
-    sendToAI(txt);
-    document.getElementById("suggestions").style.display = "none";
-  }
-
-  // Mesaj gönderme
   async function sendMessage() {
     const text = input.value.trim();
     if (!text) return;
 
     addBubble(text, "user");
     input.value = "";
-    sendToAI(text);
-  }
 
-  // AI API
-  async function sendToAI(text) {
     const res = await fetch("https://ai-shop-backend-2.onrender.com/api/assistant/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
