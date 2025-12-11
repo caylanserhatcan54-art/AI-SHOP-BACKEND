@@ -220,7 +220,7 @@ router.get("/:shopId", (req, res) => {
     .then(d => {
       if (d.ok) {
         document.getElementById("shopName").innerText =
-  data.shop.shopName + " – AI Asistan";
+  data.shop.shopName + " – Alışveriş Yapay Zekanız";
       }
     });
 </script>

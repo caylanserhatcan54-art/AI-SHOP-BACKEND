@@ -131,7 +131,7 @@ router.get("/:shopId", (req, res) => {
 </head>
 <body>
 
-<div class="header" id="shopName">AI Asistan</div>
+<div class="header" id="shopName">Alışveriş Yapay Zekanız...</div>
 
 <div class="chat" id="chat">
 
@@ -211,15 +211,15 @@ router.get("/:shopId", (req, res) => {
     addBubble(data.reply || "Bir hata oluştu ❌", "ai");
   }
 
-  // Mağaza adını çek
-fetch("https://ai-shop-backend-2.onrender.com/api/shop/public/" + shopId)
-  .then(r => r.json())
-  .then(data => {
-    if (data.ok) {
-      document.getElementById("shopName").innerText =
-        data.shop.shopName + " – Alışveriş Yapay Zekanız";
-    }
-  });
+  // Mağaza adı
+  fetch("https://ai-shop-backend-2.onrender.com/api/shop/public/${shopId}")
+    .then(r => r.json())
+    .then(d => {
+      if (d.ok) {
+        document.getElementById("shopName").innerText =
+  data.shop.shopName + " – Alışveriş Yapay Zekanız";
+      }
+    });
 </script>
 
 </body>
