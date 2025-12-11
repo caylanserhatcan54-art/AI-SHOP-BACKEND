@@ -134,7 +134,7 @@ router.get("/:shopId", (req, res) => {
 </head>
 <body>
 
-<div class="header" id="shopName">AI Asistan</div>
+<div class="header" id="shopName">Yükleniyor...</div>
 
 <div class="chat" id="chat">
 
