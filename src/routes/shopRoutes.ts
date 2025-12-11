@@ -1,50 +1,85 @@
-// src/routes/productImport.ts
-
+// src/routes/shoproutes.ts
 import { Router } from "express";
-import admin, { db } from "../config/firebaseAdmin.js";
+import QRCode from "qrcode";
+import fs from "fs";
+import path from "path";
+import { db } from "../config/firebaseAdmin.js";
 
 const router = Router();
 
-/**
- * Ürün import — Chrome extension buraya POST atıyor
- */
-router.post("/import", async (req, res) => {
-  try {
-    const { shopId, platform, products } = req.body;
+// Frontend domain
+const CLIENT_BASE_URL =
+  process.env.CLIENT_BASE_URL || "https://flowai-client.vercel.app";
 
-    if (!shopId || !platform || !products) {
-      return res.json({ ok: false, msg: "Eksik bilgi gönderildi!" });
+/* -------------------------------------------------------
+   SHOP CREATE  → Mağaza kaydı + QR oluşturma
+-------------------------------------------------------- */
+router.post("/create", async (req, res) => {
+  try {
+    const { shopId, shopName, platform } = req.body;
+
+    if (!shopId || !shopName || !platform) {
+      return res.json({ ok: false, msg: "Eksik bilgi!" });
     }
 
-    // Firestore batch
-    const batch = db.batch();
+    // FRONTEND shop URL
+    const shopUrl = `${CLIENT_BASE_URL}/shop/${shopId}`;
 
-    products.forEach((p: any) => {
-      const ref = db
-        .collection("magazalar")
-        .doc(shopId)
-        .collection("platformlar")
-        .doc(platform)
-        .collection("urunler")
-        .doc(p.id || admin.firestore().collection("_").doc().id);
-
-      batch.set(ref, p, { merge: true });
+    // Firestore kayıt
+    await db.collection("magazalar").doc(shopId).set({
+      shopId,
+      shopName,
+      platform,
+      shopUrl,
+      createdAt: Date.now(),
     });
 
-    await batch.commit();
+    // QR klasörü yoksa oluştur
+    const qrDir = path.join(process.cwd(), "public", "qr");
+    if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
+
+    // QR dosya yolu
+    const qrPath = path.join(qrDir, `${shopId}.png`);
+
+    // QR oluştur
+    await QRCode.toFile(qrPath, shopUrl);
 
     return res.json({
       ok: true,
-      msg: "Ürünler Firestore’a başarıyla aktarıldı ✔",
-      count: products.length,
+      msg: "Shop oluşturuldu ✔",
+      shopUrl,
+      qrUrl: `https://ai-shop-backend-2.onrender.com/qr/${shopId}.png`,
     });
 
   } catch (err) {
-    console.error("IMPORT ERROR:", err);
+    console.error("SHOP CREATE ERROR:", err);
+    return res.json({ ok: false, msg: "Shop create failed" });
+  }
+});
+
+/* -------------------------------------------------------
+   PUBLIC SHOP GET
+   Frontend → /api/shop/public/:shopId
+   Shop bilgilerini döner
+-------------------------------------------------------- */
+router.get("/public/:shopId", async (req, res) => {
+  try {
+    const { shopId } = req.params;
+
+    const snap = await db.collection("magazalar").doc(shopId).get();
+
+    if (!snap.exists) {
+      return res.json({ ok: false, msg: "Shop bulunamadı ❌" });
+    }
+
     return res.json({
-      ok: false,
-      msg: "Ürün import sırasında hata oluştu",
+      ok: true,
+      shop: snap.data(),
     });
+
+  } catch (err) {
+    console.error("PUBLIC ERROR:", err);
+    return res.json({ ok: false, msg: "Shop okunamadı" });
   }
 });
 

@@ -1,4 +1,3 @@
-// src/services/productService.ts
 import { db } from "../config/firebaseAdmin.js";
 /* -------------------------------------------------------------
    FULL NORMALIZE (Türkçe destekli)
