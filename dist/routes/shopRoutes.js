@@ -5,20 +5,17 @@ import fs from "fs";
 import path from "path";
 import { db } from "../config/firebaseAdmin.js";
 const router = Router();
-// Frontend domain
 const CLIENT_BASE_URL = process.env.CLIENT_BASE_URL || "https://flowai-client.vercel.app";
-/* -------------------------------------------------------
-   SHOP CREATE  → Mağaza kaydı + QR oluşturma
--------------------------------------------------------- */
+/* ============================
+   SHOP CREATE
+============================ */
 router.post("/create", async (req, res) => {
     try {
         const { shopId, shopName, platform } = req.body;
         if (!shopId || !shopName || !platform) {
             return res.json({ ok: false, msg: "Eksik bilgi!" });
         }
-        // FRONTEND shop URL
         const shopUrl = `${CLIENT_BASE_URL}/shop/${shopId}`;
-        // Firestore kayıt
         await db.collection("magazalar").doc(shopId).set({
             shopId,
             shopName,
@@ -26,13 +23,10 @@ router.post("/create", async (req, res) => {
             shopUrl,
             createdAt: Date.now(),
         });
-        // QR klasörü yoksa oluştur
         const qrDir = path.join(process.cwd(), "public", "qr");
         if (!fs.existsSync(qrDir))
             fs.mkdirSync(qrDir, { recursive: true });
-        // QR dosya yolu
         const qrPath = path.join(qrDir, `${shopId}.png`);
-        // QR oluştur
         await QRCode.toFile(qrPath, shopUrl);
         return res.json({
             ok: true,
@@ -46,11 +40,9 @@ router.post("/create", async (req, res) => {
         return res.json({ ok: false, msg: "Shop create failed" });
     }
 });
-/* -------------------------------------------------------
-   PUBLIC SHOP GET
-   Frontend → /api/shop/public/:shopId
-   Shop bilgilerini döner
--------------------------------------------------------- */
+// -------------------------------------------------------
+//  PUBLIC SHOP GET
+// -------------------------------------------------------
 router.get("/public/:shopId", async (req, res) => {
     try {
         const { shopId } = req.params;

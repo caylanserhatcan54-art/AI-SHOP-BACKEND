@@ -49,9 +49,9 @@ router.post("/create", async (req, res) => {
   }
 });
 
-/* ============================
-   PUBLIC SHOP GET
-============================ */
+// -------------------------------------------------------
+//  PUBLIC SHOP GET
+// -------------------------------------------------------
 router.get("/public/:shopId", async (req, res) => {
   try {
     const { shopId } = req.params;
@@ -62,7 +62,11 @@ router.get("/public/:shopId", async (req, res) => {
       return res.json({ ok: false, msg: "Shop bulunamadı ❌" });
     }
 
-    return res.json({ ok: true, shop: snap.data() });
+    return res.json({
+      ok: true,
+      shop: snap.data(),
+    });
+
   } catch (err) {
     console.error("PUBLIC ERROR:", err);
     return res.json({ ok: false, msg: "Shop okunamadı" });
