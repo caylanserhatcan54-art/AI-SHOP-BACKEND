@@ -163,7 +163,7 @@ router.get("/:shopId", (req, res) => {
 </div>
 
 <div class="input-box">
-  <input id="msgInput" type="text" placeholder="Mesaj yazın..." />
+  <input id="msgInput" type="text" placeholder="Alışveriş için hazırım, sorabilirsiniz 🛍️" />
   <button onclick="sendMessage()">➤</button>
 </div>
 
@@ -217,7 +217,7 @@ router.get("/:shopId", (req, res) => {
     .then(d => {
       if (d.ok) {
         document.getElementById("shopName").innerText =
-          d.shop.shopName + " – AI Asistan";
+  data.shop.shopName + " – Alışverişte Yapay Zekan";
       }
     });
 </script>
