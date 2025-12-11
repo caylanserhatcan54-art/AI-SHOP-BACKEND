@@ -121,14 +121,15 @@ router.get("/:shopId", (req, res) => {
   }
 
   // Mağaza adını çek
-  fetch("https://ai-shop-backend-2.onrender.com/api/shop/public/${shopId}")
-    .then(r => r.json())
-    .then(data => {
-      if (data.ok) {
-        document.getElementById("shopName").innerText =
-          data.shop.shopName + " – Alışveriş'te Yapay Zekanız";
-      }
-    });
+fetch("https://ai-shop-backend-2.onrender.com/api/shop/public/${shopId}")
+  .then(r => r.json())
+  .then(data => {
+    if (data.ok) {
+      // ÖRNEK: "serhat – Alışveriş’te Yapay Zekanız"
+      document.getElementById("shopName").innerText =
+        data.shop.shopId + " – Alışveriş’te Yapay Zekanız";
+    }
+  });
 
   addBubble("Merhaba 👋 Nasıl yardımcı olabilirim?", "ai");
 
