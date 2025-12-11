@@ -151,7 +151,7 @@ router.get("/:shopId", (req, res) => {
     .then(data => {
       if (data.ok && data.shop && data.shop.shopName) {
         document.getElementById("shopName").innerText =
-          data.shop.shopName + " – Alışverişte Yapay Zekanız";
+          data.shop.shopName + " – Alışveriş'te Yapay Zekanız";
       } else {
         document.getElementById("shopName").innerText = "Mağaza bulunamadı ❌";
       }
