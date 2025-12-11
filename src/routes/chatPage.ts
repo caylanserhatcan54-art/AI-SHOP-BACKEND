@@ -134,7 +134,7 @@ router.get("/:shopId", (req, res) => {
 </head>
 <body>
 
-<div class="header" id="shopName">Yükleniyor...</div>
+<div class="header" id="shopName">Alışveriş Yapay Zekanız...</div>
 
 <div class="chat" id="chat">
 
@@ -220,7 +220,7 @@ router.get("/:shopId", (req, res) => {
     .then(d => {
       if (d.ok) {
         document.getElementById("shopName").innerText =
-  data.shop.shopName + " – Alışverişte Yapay Zekan";
+  data.shop.shopName + " – AI Asistan";
       }
     });
 </script>
