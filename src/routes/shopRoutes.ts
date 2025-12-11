@@ -5,86 +5,101 @@ import path from "path";
 
 const router = Router();
 
-router.post("/register", (req, res) => {
+// Sabit domain (ENV’den de alabilirsin)
+const CLIENT_BASE_URL = process.env.CLIENT_BASE_URL || "https://flowai-client.vercel.app";
+
+// ------------------------------
+//  SHOP REGISTER
+// ------------------------------
+router.post("/register", async (req, res) => {
   try {
     const { shopId, shopName, platform } = req.body;
 
-    if (!shopId) {
-      return res.status(400).json({ ok: false, msg: "shopId eksik!" });
+    if (!shopId || !shopName || !platform) {
+      return res.json({ ok: false, msg: "Eksik bilgi!" });
     }
 
     const shopsDir = path.join(process.cwd(), "public", "shops");
     if (!fs.existsSync(shopsDir)) fs.mkdirSync(shopsDir, { recursive: true });
 
-    const shopData = {
+    const filePath = path.join(shopsDir, `${shopId}.json`);
+
+    const data = {
       shopId,
-      shopName: shopName || "Bilgi yok",
-      platform: platform || "unknown",
+      shopName,
+      platform,
+      shopUrl: `${CLIENT_BASE_URL}/shop/${shopId}`, // ✔ Kalıcı Domain
       createdAt: Date.now(),
     };
 
-    const fileContent = JSON.stringify(shopData, null, 2);
+    fs.writeFileSync(filePath, JSON.stringify(data, null, 2));
 
-    fs.writeFileSync(
-      path.join(shopsDir, `${shopId}.json`),
-      fileContent.toString(), // ⭐ Buffer hatası çözüldü
-      "utf-8"
-    );
-
-    res.json({ ok: true, msg: "Shop registered successfully" });
+    return res.json({
+      ok: true,
+      msg: "Shop registered successfully",
+      shopUrl: data.shopUrl,
+    });
 
   } catch (err) {
-    console.log(err);
-    res.status(500).json({ ok: false, msg: "Shop kayıt hatası" });
+    console.error("REGISTER ERROR:", err);
+    return res.json({ ok: false, msg: "Shop register failed" });
   }
 });
 
-// QR Generate
+
+// ------------------------------
+//  PUBLIC SHOP GET
+// ------------------------------
+router.get("/public/:shopId", (req, res) => {
+  try {
+    const { shopId } = req.params;
+
+    const filePath = path.join(process.cwd(), "public", "shops", `${shopId}.json`);
+
+    if (!fs.existsSync(filePath)) {
+      return res.json({ ok: false, msg: "Shop bulunamadı ❌" });
+    }
+
+    const data = JSON.parse(fs.readFileSync(filePath, "utf8"));
+
+    return res.json({ ok: true, shop: data });
+
+  } catch (err) {
+    console.error("PUBLIC ERROR:", err);
+    return res.json({ ok: false, msg: "Shop okunamadı" });
+  }
+});
+
+
+// ------------------------------
+//  QR GENERATE
+// ------------------------------
 router.post("/generate-qr", async (req, res) => {
   try {
     const { shopId } = req.body;
 
-    if (!shopId) {
-      return res.status(400).json({ ok: false, msg: "shopId gerekli!" });
-    }
+    if (!shopId) return res.json({ ok: false, msg: "shopId gerekli!" });
+
+    // Ana hedef: QR her zaman kalıcı domain'i kullansın!
+    const shopUrl = `${CLIENT_BASE_URL}/shop/${shopId}`;
 
     const qrDir = path.join(process.cwd(), "public", "qr");
     if (!fs.existsSync(qrDir)) fs.mkdirSync(qrDir, { recursive: true });
 
     const qrPath = path.join(qrDir, `${shopId}.png`);
 
-    // ✔ Yeni frontend linki
-    const shopUrl = `https://flowai-client.vercel.app/shop/${shopId}`;
-
     await QRCode.toFile(qrPath, shopUrl);
 
-    res.json({
+    return res.json({
       ok: true,
+      msg: "QR üretildi ✔",
       qrUrl: `https://ai-shop-backend-2.onrender.com/qr/${shopId}.png`,
-      shopUrl,
+      shopUrl: shopUrl,
     });
 
-  } catch (e) {
-    res.status(500).json({ ok: false, msg: "QR üretilemedi" });
-  }
-});
-
-// ✨ İşte eksik olan GET endpoint
-router.get("/public/:shopId", (req, res) => {
-  try {
-    const { shopId } = req.params;
-    const shopFile = path.join(process.cwd(), "public", "shops", `${shopId}.json`);
-
-    if (!fs.existsSync(shopFile)) {
-      return res.json({ ok: false, msg: "Shop bulunamadı ❌" });
-    }
-
-    const shopData = JSON.parse(fs.readFileSync(shopFile, "utf-8"));
-
-    res.json({ ok: true, shop: shopData });
-
   } catch (err) {
-    res.status(500).json({ ok: false, msg: "Shop bilgisi alınamadı" });
+    console.error("QR ERROR:", err);
+    return res.json({ ok: false, msg: "QR üretilemedi" });
   }
 });
 
