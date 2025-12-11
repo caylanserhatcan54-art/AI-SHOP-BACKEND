@@ -7,6 +7,7 @@ import { dirname } from "path";
 import path from "path";
 import assistantRouter from "./routes/assistant.js";
 import shopRoutes from "./routes/shoproutes.js";
+import chatPage from "./routes/chatPage.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const app = express();
@@ -16,6 +17,7 @@ app.use(express.json());
 // ROUTES
 app.use("/api/assistant", assistantRouter);
 app.use("/api/shop", shopRoutes);
+app.use("/chat", chatPage);
 // STATIC QR SERVING
 app.use("/qr", express.static(path.join(process.cwd(), "public", "qr")));
 // DEFAULT TEST ROUTE
