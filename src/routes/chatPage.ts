@@ -18,164 +18,128 @@ router.get("/:shopId", (req, res) => {
   body {
     margin: 0;
     height: 100vh;
-    background: #1a1d21;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    background: #1a1a1a;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     display: flex;
     flex-direction: column;
     color: white;
   }
 
   .header {
-    padding: 18px;
+    padding: 16px;
     text-align: center;
-    font-size: 20px;
+    font-size: 18px;
     font-weight: 600;
-    background: #1f2328;
-    border-bottom: 1px solid #2a2e33;
+    background: #222;
+    border-bottom: 1px solid #333;
   }
 
   .chat {
     flex: 1;
     overflow-y: auto;
-    padding: 22px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
     gap: 14px;
   }
 
-  /* AI mesaj balonu */
+  .suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .suggestion-btn {
+    padding: 10px 14px;
+    background: #2d2d2d;
+    border-radius: 14px;
+    font-size: 14px;
+    cursor: pointer;
+    border: 1px solid #3a3a3a;
+    color: #8be0ff;
+    transition: 0.2s;
+  }
+  .suggestion-btn:hover { background: #333; }
+
   .bubble-ai {
     max-width: 80%;
     padding: 14px 18px;
-    background: #2a2f35;
-    border-radius: 18px;
-    border-top-left-radius: 6px;
-    font-size: 16px;
+    background: #2c2c2c;
+    border-radius: 16px;
+    border-top-left-radius: 4px;
+    color: #e6e6e6;
+    font-size: 15px;
     line-height: 1.5;
-    color: #d9d9d9;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
-    white-space: pre-line;
   }
 
-  /* Kullanıcı mesajı */
   .bubble-user {
     max-width: 80%;
     margin-left: auto;
     padding: 14px 18px;
-    background: #4bc3ff;
-    border-radius: 18px;
-    border-top-right-radius: 6px;
-    font-size: 16px;
-    color: #fff;
-    line-height: 1.5;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
-  }
-
-  /* Öneri buton tasarımı */
-  .suggestions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 10px;
-  }
-
-  .suggestion-btn {
-    padding: 14px 20px;
-    background: #24292e;
-    border-radius: 18px;
-    border: 1px solid #333;
-    color: #4bc3ff;
+    background: #4c8bf5;
+    border-radius: 16px;
+    border-top-right-radius: 4px;
+    color: white;
     font-size: 15px;
-    cursor: pointer;
-    transition: 0.2s;
-  }
-
-  .suggestion-btn:hover {
-    background: #2d3339;
   }
 
   .input-box {
     padding: 14px;
-    background: #1f2328;
-    border-top: 1px solid #2a2e33;
+    background: #222;
+    border-top: 1px solid #333;
     display: flex;
     gap: 10px;
   }
 
   .input-box input {
     flex: 1;
-    background: #2a2f35;
+    background: #333;
     border: none;
     padding: 14px;
     border-radius: 22px;
-    outline: none;
     color: white;
     font-size: 15px;
   }
 
   .input-box button {
-    width: 52px;
-    height: 52px;
-    background: #4bc3ff;
+    width: 50px;
+    height: 50px;
+    background: #4c8bf5;
     border-radius: 50%;
     border: none;
-    color: #fff;
-    font-size: 22px;
-  }
-
-  @media (max-width: 600px) {
-    .bubble-ai,
-    .bubble-user {
-      max-width: 90%;
-    }
+    font-size: 20px;
+    color: white;
+    cursor: pointer;
   }
 </style>
-
 </head>
 <body>
 
-<div class="header" id="shopName">Alışveriş Yapay Zekanız...</div>
+<div class="header" id="shopName">Yükleniyor...</div>
 
 <div class="chat" id="chat">
 
-  <!-- İlk girişte öneri baloncukları -->
-  <div id="suggestionArea">
-    <p style="color:#4bc3ff; font-size:17px; font-weight:600; margin-bottom:10px;">
-      Başlamak için bir konu seç:
-    </p>
-
-    <div class="suggestions">
-      <div class="suggestion-btn" onclick="autoAsk('Kombin önerisi verir misin?')">
-        👗 Kombin Önerisi
-      </div>
-      <div class="suggestion-btn" onclick="autoAsk('Bir ürün bulur musun?')">
-        🔍 Ürün Ara
-      </div>
-      <div class="suggestion-btn" onclick="autoAsk('Benzer ürün öner')">
-        🛍️ Benzer Ürün
-      </div>
-      <div class="suggestion-btn" onclick="autoAsk('Stilime göre öneriler ver')">
-        ✨ Stil Önerisi
-      </div>
-      <div class="suggestion-btn" onclick="autoAsk('Fiyat analizi yap')">
-        💰 Fiyat Analizi
-      </div>
-    </div>
+  <div class="suggestions" id="suggestions">
+    <div class="suggestion-btn" onclick="quickAsk('Kombin önerisi verir misin?')">🧥 Kombin Önerisi</div>
+    <div class="suggestion-btn" onclick="quickAsk('Bana ürün önerir misin?')">🛍️ Ürün Önerisi</div>
+    <div class="suggestion-btn" onclick="quickAsk('Bu mağazada ne var?')">📦 Ürünlere Bak</div>
+    <div class="suggestion-btn" onclick="quickAsk('Fiyat performans ürünü öner')">💎 FP Ürün Öner</div>
+    <div class="suggestion-btn" onclick="quickAsk('Yeni gelenler neler?')">✨ Yeni Gelenler</div>
   </div>
 
 </div>
 
 <div class="input-box">
-  <input id="msgInput" type="text" placeholder="Alışveriş için hazırım, sorabilirsiniz 🛍️" />
+  <input id="msgInput" type="text" placeholder="Alışveriş için hazırım, sorunuzu yazın 🛍️" />
   <button onclick="sendMessage()">➤</button>
 </div>
 
 <script>
-  const shopId = "${shopId}";
   const chat = document.getElementById("chat");
   const input = document.getElementById("msgInput");
+  const shopId = "${shopId}";
 
-  // Baloncuk ekleme
   function addBubble(text, sender) {
     const div = document.createElement("div");
     div.className = sender === "user" ? "bubble-user" : "bubble-ai";
@@ -184,11 +148,26 @@ router.get("/:shopId", (req, res) => {
     chat.scrollTop = chat.scrollHeight;
   }
 
-  // Öneri balonu tıklandığında otomatik soru sor
-  function autoAsk(question) {
-    document.getElementById("suggestionArea").style.display = "none";
-    addBubble(question, "user");
-    askBackend(question);
+  // 🔥 MAĞAZA ADINI GETİR
+  fetch("https://ai-shop-backend-2.onrender.com/api/shop/public/" + shopId)
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok && data.shop && data.shop.shopName) {
+        document.getElementById("shopName").innerText =
+          data.shop.shopName + " – Alışveriş Yapay Zekanız";
+      } else {
+        document.getElementById("shopName").innerText = "Mağaza bulunamadı ❌";
+      }
+    });
+
+  // AI karşılama mesajı
+  addBubble("Merhaba 👋 Nasıl yardımcı olabilirim?", "ai");
+
+  // 🔥 Hızlı soru balonları → otomatik sor
+  function quickAsk(txt) {
+    addBubble(txt, "user");
+    sendToAI(txt);
+    document.getElementById("suggestions").style.display = "none";
   }
 
   // Mesaj gönderme
@@ -198,31 +177,23 @@ router.get("/:shopId", (req, res) => {
 
     addBubble(text, "user");
     input.value = "";
-
-    askBackend(text);
+    sendToAI(text);
   }
 
-  // Backend API
-  async function askBackend(msg) {
+  // AI API
+  async function sendToAI(text) {
     const res = await fetch("https://ai-shop-backend-2.onrender.com/api/assistant/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ shopId, message: msg })
+      body: JSON.stringify({
+        shopId,
+        message: text
+      })
     });
 
     const data = await res.json();
     addBubble(data.reply || "Bir hata oluştu ❌", "ai");
   }
-
-  // Mağaza adı
-  fetch("https://ai-shop-backend-2.onrender.com/api/shop/public/${shopId}")
-    .then(r => r.json())
-    .then(d => {
-      if (d.ok) {
-        document.getElementById("shopName").innerText =
-  data.shop.shopName + " – Alışveriş Yapay Zekanız";
-      }
-    });
 </script>
 
 </body>
