@@ -2,7 +2,7 @@ import { Router } from "express";
 
 const router = Router();
 
-router.get("/:shopId", async (req, res) => {
+router.get("/:shopId", (req, res) => {
   const { shopId } = req.params;
 
   const html = `
@@ -15,133 +15,154 @@ router.get("/:shopId", async (req, res) => {
 <title>AI Shop Assistant</title>
 
 <style>
-  * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
-    background: linear-gradient(to bottom right, #f8f8fa, #e8e9ed);
-    font-family: "Segoe UI", sans-serif;
+    margin: 0;
     height: 100vh;
+    background: #1f1f1f;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
     display: flex;
     flex-direction: column;
+    color: white;
   }
 
   .header {
     padding: 16px;
-    background: white;
-    border-bottom: 1px solid #ddd;
+    text-align: center;
     font-size: 18px;
     font-weight: 600;
-    text-align: center;
+    background: #262626;
+    border-bottom: 1px solid #333;
   }
 
-  .chat-container {
+  .chat {
     flex: 1;
     overflow-y: auto;
     padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
   }
 
-  .msg {
-    max-width: 85%;
+  /* AI mesaj balonu */
+  .bubble-ai {
+    max-width: 80%;
     padding: 14px 18px;
-    margin-bottom: 14px;
-    border-radius: 10px;
-    font-size: 16px;
+    background: #2f2f2f;
+    border-radius: 16px;
+    border-top-left-radius: 4px;
+    font-size: 15px;
     line-height: 1.5;
+    color: #e8e8e8;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
   }
 
-  .ai {
-    background: white;
-    border: 1px solid #ddd;
-    align-self: flex-start;
-  }
-
-  .user {
-    background: #2f8bfd;
-    color: white;
+  /* Kullanıcı mesajı */
+  .bubble-user {
+    max-width: 80%;
     margin-left: auto;
-    align-self: flex-end;
+    padding: 14px 18px;
+    background: #4c8bf5;
+    border-radius: 16px;
+    border-top-right-radius: 4px;
+    font-size: 15px;
+    color: white;
+    line-height: 1.5;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
   }
 
-  .input-area {
-    padding: 12px;
-    background: white;
-    border-top: 1px solid #ddd;
+  .input-box {
+    padding: 14px;
+    background: #262626;
+    border-top: 1px solid #333;
     display: flex;
     gap: 10px;
   }
 
-  .input-area input {
+  .input-box input {
     flex: 1;
+    background: #333;
+    border: none;
     padding: 14px;
-    font-size: 16px;
-    border-radius: 8px;
-    border: 1px solid #ccc;
+    border-radius: 24px;
     outline: none;
+    color: white;
+    font-size: 15px;
   }
 
-  .input-area button {
-    background: #2f8bfd;
-    color: white;
-    padding: 0 18px;
+  .input-box button {
+    width: 50px;
+    height: 50px;
+    background: #4c8bf5;
+    border-radius: 50%;
     border: none;
-    border-radius: 8px;
-    font-size: 16px;
+    color: white;
+    font-size: 18px;
+  }
+
+  /* Mobil tam ekran */
+  @media (max-width: 600px) {
+    .bubble-ai,
+    .bubble-user {
+      max-width: 90%;
+      font-size: 15px;
+    }
   }
 </style>
 </head>
 <body>
 
-<div class="header" id="shopName">AI Shop Assistant</div>
+<div class="header" id="shopName">AI Asistan</div>
 
-<div class="chat-container" id="chat"></div>
+<div class="chat" id="chat"></div>
 
-<div class="input-area">
-  <input id="msgInput" type="text" placeholder="Mesajınızı yazın..." />
-  <button onclick="sendMsg()">Gönder</button>
+<div class="input-box">
+  <input id="msgInput" type="text" placeholder="Mesaj yazın..." />
+  <button onclick="sendMessage()">➤</button>
 </div>
 
 <script>
   const chat = document.getElementById("chat");
   const input = document.getElementById("msgInput");
-
   const shopId = "${shopId}";
 
-  fetch("https://ai-shop-backend-2.onrender.com/api/shop/public/${shopId}")
-    .then(res => res.json())
-    .then(data => {
-      if (data.ok && data.shop.shopName) {
-        document.getElementById("shopName").innerText =
-          data.shop.shopName + " - AI Asistan";
-      }
-    });
-
-  function addMessage(text, sender = "ai") {
+  function addBubble(text, sender) {
     const div = document.createElement("div");
-    div.className = "msg " + sender;
+    div.className = sender === "user" ? "bubble-user" : "bubble-ai";
     div.innerText = text;
     chat.appendChild(div);
     chat.scrollTop = chat.scrollHeight;
   }
 
-  addMessage("Merhaba! Size nasıl yardımcı olabilirim? 😊", "ai");
+  // Mağaza adını çek
+  fetch("https://ai-shop-backend-2.onrender.com/api/shop/public/${shopId}")
+    .then(r => r.json())
+    .then(data => {
+      if (data.ok) {
+        document.getElementById("shopName").innerText =
+          data.shop.shopName + " – AI Asistan";
+      }
+    });
 
-  async function sendMsg() {
+  addBubble("Merhaba 👋 Nasıl yardımcı olabilirim?", "ai");
+
+  async function sendMessage() {
     const text = input.value.trim();
     if (!text) return;
 
-    addMessage(text, "user");
+    addBubble(text, "user");
     input.value = "";
 
-    const response = await fetch("https://ai-shop-backend-2.onrender.com/api/assistant/chat", {
+    const res = await fetch("https://ai-shop-backend-2.onrender.com/api/assistant/chat", {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         shopId,
         message: text
       })
     });
 
-    const data = await response.json();
-    addMessage(data.reply || "Bir hata oluştu ❌", "ai");
+    const data = await res.json();
+    addBubble(data.reply || "Bir hata oluştu ❌", "ai");
   }
 </script>
 
