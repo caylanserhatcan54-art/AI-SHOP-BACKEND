@@ -6,6 +6,30 @@ import {
   normalizeText,
 } from "./productService.js";
 
+type QuestionScope = "SMALL_TALK" | "GENERAL_INFO" | "STORE_PRODUCT";
+
+function detectQuestionScope(msg: string): QuestionScope {
+  const t = normalizeText(msg);
+
+  // tamamen sohbet
+  if (
+    /nasılsın|nasilsin|naber|ne yapıyorsun|napıyorsun|canım sıkıldı|sıkıldım/i.test(msg)
+  ) {
+    return "SMALL_TALK";
+  }
+
+  // ürün dışı genel bilgi
+  if (
+    /nasıl kullanılır|ne işe yarar|faydaları|bahçe|temizlik|şampuan|tıraş|bitki çayı|ilaç|krem|hırdavat|marangoz/i.test(t)
+  ) {
+    return "GENERAL_INFO";
+  }
+
+  // geri kalan = mağaza ürünü
+  return "STORE_PRODUCT";
+}
+
+
 /* -------------------------------------------------
  * FRONTEND İÇİN ÜRÜN FORMATLAMA + YENİ EXPORT
  * ------------------------------------------------- */
@@ -813,6 +837,23 @@ function findMatchingProducts(msg: string, products: Product[]): Product[] {
   const normMsg = normalizeText(msg);
 
   if (!products.length) return [];
+  
+  // ❌ KATEGORİ KARIŞMASINI ENGELLE
+
+  // SADECE MONT / KABAN
+  if (normMsg.includes("mont") || normMsg.includes("kaban")) {
+    return products.filter(p =>
+      normalizeText(p.title || "").includes("mont") ||
+      normalizeText(p.title || "").includes("kaban")
+    );
+  }
+
+  // SADECE AYAKKABI
+  if (normMsg.includes("ayakkabi") || normMsg.includes("ayakkabı")) {
+    return products.filter(p =>
+      normalizeText(p.category || "") === "ayakkabi"
+    );
+  }
 
   const tokens = normMsg.split(" ").filter(t => t.length > 2);
 
@@ -1425,7 +1466,12 @@ function buildMergedResponse(
     full += "\n\n" + part;
   }
 
-  return full.trim();
+  let merged = full.trim();
+
+  // 🔥 TÜM YAPAY ZEKA KATMANLARINI BURADA EKLİYORUZ
+  merged = enrichAnswer(merged, main, products, msg);
+
+  return merged;
 }
 function buildPurchasePressure(mainProduct: Product | null) {
   if (!mainProduct) return "";
@@ -1609,6 +1655,26 @@ export async function generateSmartReply(
   const msg = (userMessage || "").trim();
   if (!msg) return "Merhaba 👋 Nasıl yardımcı olayım?";
 
+  // 🔥 SORU TİPİ BELİRLEME
+  const scope = detectQuestionScope(msg);
+
+  // 🗣️ SADECE SOHBET – ÜRÜN YOK
+  if (scope === "SMALL_TALK") {
+    return "İyiyim ve buradayım 😊 Sen nasılsın? Bugün ne bakıyoruz?";
+  }
+
+  // 🌍 GENEL BİLGİ – MAĞAZA ÜRÜNÜ YOK
+  if (scope === "GENERAL_INFO") {
+  const storeProducts = await getProductsForShop(shopId);
+  const worldCat = detectWorldCategory(msg);
+
+  if (storeHasCategory(storeProducts, worldCat)) {
+    return generateGeneralInfoAnswer(msg);
+  }
+
+  return worldKnowledgeAnswer(msg);
+}
+
   const name = extractCustomerName(msg);
   const products = await getProductsForShop(shopId);
 
@@ -1640,6 +1706,185 @@ export async function getAIResponse(
   userMessage: string
 ): Promise<string> {
   return generateSmartReply(shopId, userMessage);
+}
+/* ============================================================
+   🌍 UNIVERSAL STORE AI ENGINE – FULL VERSION
+============================================================ */
+
+/* ---------- 1️⃣ 70+ SEKTÖR KEYWORD MOTORU ---------- */
+
+type Sector =
+  | "moda" | "ayakkabi" | "kozmetik" | "parfum" | "temizlik"
+  | "hirdavat" | "bahce" | "mutfak" | "mobilya" | "dekorasyon"
+  | "elektronik" | "bilgisayar" | "telefon" | "aksesuar"
+  | "spor" | "fitness" | "kamp" | "outdoor"
+  | "anne-bebek" | "oyuncak"
+  | "evcil-hayvan"
+  | "saglik" | "medikal"
+  | "takviye" | "vitamin"
+  | "kirtasiye" | "ofis"
+  | "oto-aksesuar"
+  | "yapi" | "insaat"
+  | "elektrikli-alet"
+  | "aydinlatma"
+  | "beyaz-esya"
+  | "gida" | "icecek"
+  | "bitki-cayi"
+  | "dogal-urun"
+  | "takı"
+  | "saat"
+  | "erkek-bakim"
+  | "kadin-bakim"
+  | "cocuk"
+  | "mobilya-yatak"
+  | "genel";
+
+const SECTOR_KEYWORDS: Record<Sector, RegExp> = {
+  moda: /elbis|kazak|pantolon|tişört|giyim/,
+  ayakkabi: /ayakkab|sneaker|bot|terlik/,
+  kozmetik: /krem|cilt|bakım|serum/,
+  parfum: /parfüm|edt|edp/,
+  temizlik: /temizlik|deterjan|krem/,
+  hirdavat: /matkap|vida|pense|anahtar/,
+  bahce: /bahçe|tırpan|çim|budama/,
+  mutfak: /tencere|tava|ocak/,
+  mobilya: /koltuk|masa|sandalye/,
+  dekorasyon: /dekor|vazo|çerçeve/,
+  elektronik: /elektronik/,
+  bilgisayar: /bilgisayar|laptop/,
+  telefon: /telefon|cep/,
+  aksesuar: /kılıf|case/,
+  spor: /spor/,
+  fitness: /fitness|halter/,
+  kamp: /kamp/,
+  outdoor: /outdoor/,
+  "anne-bebek": /bebek|anne/,
+  oyuncak: /oyuncak/,
+  "evcil-hayvan": /kedi|köpek|mama/,
+  saglik: /sağlık|ağrı/,
+  medikal: /medikal/,
+  takviye: /takviye/,
+  vitamin: /vitamin/,
+  kirtasiye: /defter|kalem/,
+  ofis: /ofis/,
+  "oto-aksesuar": /oto|araba/,
+  yapi: /yapı/,
+  insaat: /inşaat/,
+  "elektrikli-alet": /elektrikli/,
+  aydinlatma: /lamba|avize/,
+  "beyaz-esya": /buzdolabı|çamaşır/,
+  gida: /gıda/,
+  icecek: /içecek/,
+  "bitki-cayi": /bitki çayı/,
+  "dogal-urun": /doğal/,
+  takı: /takı/,
+  saat: /saat/,
+  "erkek-bakim": /erkek bakım/,
+  "kadin-bakim": /kadın bakım/,
+  cocuk: /çocuk/,
+  "mobilya-yatak": /yatak|baza/,
+  genel: /.*/
+};
+
+function detectSector(msg: string): Sector {
+  const t = normalizeText(msg);
+  for (const [sector, regex] of Object.entries(SECTOR_KEYWORDS)) {
+    if (regex.test(t)) return sector as Sector;
+  }
+  return "genel";
+}
+
+/* ---------- 2️⃣ MAĞAZAYA ÖZEL AI KARAKTER AYARI ---------- */
+
+type AIProfile = {
+  tone: "soft" | "normal" | "aggressive";
+  emojiLevel: "none" | "low" | "high";
+  persuasionLevel: 1 | 2 | 3 | 4 | 5;
+};
+
+const STORE_AI_PROFILE: AIProfile = {
+  tone: "normal",
+  emojiLevel: "low",
+  persuasionLevel: 4
+};
+
+/* ---------- 3️⃣ SATIŞ ARTIRAN A/B CÜMLE MOTORU ---------- */
+
+const SALES_PITCH_VARIANTS = [
+  "Bu ürün kullanıcılar arasında oldukça popüler.",
+  "Fiyatına göre sunduğu kalite gerçekten iyi.",
+  "Günlük kullanım için çok mantıklı bir tercih.",
+  "Bu tarz ürünler genelde hızlı tükeniyor.",
+  "Uzun vadede pişman etmeyecek bir seçim."
+];
+
+function salesPitch(): string {
+  return SALES_PITCH_VARIANTS[Math.floor(Math.random() * SALES_PITCH_VARIANTS.length)];
+}
+
+/* ---------- 4️⃣ “BUNU ALANLAR” MOTORU ---------- */
+
+function boughtTogether(main: Product | null, products: Product[]): string {
+  if (!main) return "";
+
+  const related = products.filter(
+    p => p.id !== main.id && p.category === main.category
+  )[0];
+
+  if (!related) return "";
+
+  return `
+🔁 **Bunu alanlar şunlara da baktı:**
+- ${related.title}
+`;
+}
+
+/* ---------- 5️⃣ KOMBIN + ÇAPRAZ SATIŞ ---------- */
+
+function crossSell(main: Product | null, products: Product[]): string {
+  if (!main) return "";
+
+  if (main.category === "ayakkabi") {
+    const pantolon = products.find(p =>
+      /pantolon|jean/.test(normalizeText(p.title || ""))
+    );
+    if (pantolon) {
+      return `🧩 Bu ayakkabı **${pantolon.title}** ile çok güzel gider.`;
+    }
+  }
+
+  return "";
+}
+
+/* ---------- 6️⃣ HEDİYE ALMA ZEKASI ---------- */
+
+function giftBrain(msg: string): string {
+  const t = normalizeText(msg);
+  if (!t.includes("hediye")) return "";
+
+  if (t.includes("anne")) return "🎁 Anneler için zarif ve günlük kullanılabilir ürünler daha çok beğenilir.";
+  if (t.includes("baba")) return "🎁 Babalar için sade ve kullanışlı ürünler daha mantıklıdır.";
+  if (t.includes("sevgili")) return "❤️ Sevgili için biraz daha özel ve tarz yansıtan ürünler tercih edilir.";
+
+  return "🎁 Hediye alırken kullanışlılık + tarz uyumu en güvenli yaklaşımdır.";
+}
+
+/* ---------- 7️⃣ AI ÇIKTI BİRLEŞTİRİCİ ---------- */
+
+function enrichAnswer(
+  base: string,
+  main: Product | null,
+  products: Product[],
+  msg: string
+): string {
+  let out = base;
+
+  out += "\n\n" + salesPitch();
+  out += boughtTogether(main, products);
+  out += "\n" + crossSell(main, products);
+  out += "\n" + giftBrain(msg);
+
+  return out;
 }
 /* ==================================================
    🔥 EK MODÜLLER – TAM MAĞAZA YAPAY ZEKASI
@@ -1743,3 +1988,167 @@ function softCheckoutPush(intent: "LOW" | "MID" | "HIGH"): string {
     return "🛍️ Sepete ekleyip biraz daha düşünebilirsin.";
   return "İstersen başka alternatifler de gösterebilirim 😊";
 }
+function generateGeneralInfoAnswer(msg: string): string {
+  const t = normalizeText(msg);
+
+  if (t.includes("bahçe") && t.includes("kes")) {
+    return `
+Bahçede çim, çalı ve dalları kesmek için temel ekipmanlar şunlardır 👇
+
+🔌 Elektrikli / Akülü Aletler
+- Çit ve çalı kesme makinesi
+- Dal budama testeresi
+- Tırpan / ot biçme makinesi
+
+✂️ El Aletleri
+- Bahçe makası
+- Teleskopik budama makası
+- Budama testeresi
+
+🧤 Güvenlik & Destek
+- Bahçe eldiveni
+- Koruyucu gözlük
+- Bakım yağı
+
+💡 Motorlu aletler büyük alanlarda hız kazandırır, el aletleri hassas işlerde idealdir.
+İstersen bahçenin büyüklüğüne göre daha net bir liste de çıkarabilirim.
+`;
+  }
+
+  if (t.includes("temizlik") && t.includes("krem")) {
+    return `
+Krem formunda temizlik ürünleri genellikle sert yüzeylerde derin temizlik için kullanılır 🧽
+
+🧴 Nasıl kullanılır?
+- Yüzeyi hafif nemlendir
+- Kremi az miktar uygula
+- Süngerle ovalayarak temizle
+- Bol suyla durula
+
+📌 Nerelerde kullanılır?
+- Mutfak tezgâhı
+- Lavabo & banyo
+- Ocak & fırın yüzeyi
+- Paslanmaz çelik
+
+⚠️ Doğal taş yüzeylerde önce küçük bir alanda test önerilir.
+Eldiven kullanmak cildi korur.
+`;
+  }
+
+  return "Bu konuda genel bir bilgi verebilirim ama biraz daha detay yazarsan daha net anlatırım 😊";
+}
+/* =========================================================
+   🌍 GLOBAL KNOWLEDGE + STORE-SAFE AI EXTENSION
+   BU MODÜL MAĞAZA DIŞI ÜRÜN SATMAZ, SADECE BİLGİ VERİR
+========================================================= */
+
+type WorldCategory =
+  | "bahce"
+  | "temizlik"
+  | "hirdavat"
+  | "kozmetik"
+  | "saglik"
+  | "mutfak"
+  | "mobilya"
+  | "elektronik"
+  | "spor"
+  | "ev-dekorasyon"
+  | "genel";
+
+/* ---------- KONU TESPİTİ (DÜNYA GENELİ) ---------- */
+function detectWorldCategory(msg: string): WorldCategory {
+  const t = normalizeText(msg);
+
+  if (/bahçe|çim|budama|kesme|tırpan|çalı/.test(t)) return "bahce";
+  if (/temizlik|krem|deterjan|çamaşır|bulaşık/.test(t)) return "temizlik";
+  if (/hırdavat|matkap|vida|pense|anahtar/.test(t)) return "hirdavat";
+  if (/şampuan|krem|traş|bakım|cilt/.test(t)) return "kozmetik";
+  if (/ilaç|ağrı|vitamin|takviye/.test(t)) return "saglik";
+  if (/tencere|tava|mutfak|ocak/.test(t)) return "mutfak";
+  if (/masa|sandalye|koltuk|baza|komodin/.test(t)) return "mobilya";
+  if (/telefon|laptop|kulaklık|tablet/.test(t)) return "elektronik";
+  if (/spor|fitness|koşu|yoga/.test(t)) return "spor";
+  if (/perde|halı|dekor|avize/.test(t)) return "ev-dekorasyon";
+
+  return "genel";
+}
+
+/* ---------- MAĞAZA KATEGORİSİ VAR MI? ---------- */
+function storeHasCategory(
+  storeProducts: Product[],
+  worldCategory: WorldCategory
+): boolean {
+  const joined = storeProducts.map(p => normalizeText(p.title || "")).join(" ");
+
+  switch (worldCategory) {
+    case "bahce":
+      return /bahçe|tırpan|budama|çim/.test(joined);
+    case "temizlik":
+      return /temizlik|deterjan|krem/.test(joined);
+    case "kozmetik":
+      return /şampuan|krem|bakım|parfüm/.test(joined);
+    case "hirdavat":
+      return /matkap|vida|pense|anahtar/.test(joined);
+    default:
+      return true;
+  }
+}
+
+/* ---------- DÜNYA GENELİ BİLGİ CEVAPLARI ---------- */
+function worldKnowledgeAnswer(msg: string): string {
+  const cat = detectWorldCategory(msg);
+
+  switch (cat) {
+    case "bahce":
+      return `
+Bahçe işleri için genel olarak şu ürün grupları kullanılır 🌱
+
+🔌 Motorlu Aletler
+- Çit & çalı kesme makinesi
+- Dal budama testeresi
+- Tırpan
+
+✂️ El Aletleri
+- Bahçe makası
+- Budama testeresi
+
+🧤 Güvenlik
+- Eldiven
+- Gözlük
+
+Bahçenin büyüklüğüne göre motorlu veya manuel tercih edilir.
+`;
+
+    case "temizlik":
+      return `
+Temizlik kremleri sert yüzeyler için kullanılır 🧽
+
+🧴 Kullanım:
+- Yüzeyi nemlendir
+- Kremi uygula
+- Süngerle ovala
+- Durula
+
+📌 Kullanım alanı:
+- Mutfak
+- Banyo
+- Ocak
+`;
+
+    case "kozmetik":
+      return `
+Kozmetik ürünlerde cilt tipine göre seçim önemlidir 💆‍♀️
+- Kuru cilt → nemlendirici ağırlıklı
+- Yağlı cilt → hafif formül
+- Hassas cilt → parfümsüz ürünler
+`;
+
+    default:
+      return `
+Bu konuda genel bilgi verebilirim 😊  
+İstersen biraz daha detay yaz, daha net anlatayım.
+`;
+  }
+}
+
