@@ -65,6 +65,25 @@ router.get("/:shopId", (req, res) => {
     box-shadow: 0 2px 8px rgba(0,0,0,0.35);
   }
 
+  /* ----------- ÖNERİ BALONCUKLARI ----------- */
+  .suggestion-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .suggestion {
+    background: linear-gradient(135deg, #30cfd0, #00b4d8);
+    padding: 10px 16px;
+    border-radius: 20px;
+    color: #003b4a;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    user-select: none;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+  }
+
   .input-box {
     padding: 14px;
     background: #262626;
@@ -95,7 +114,6 @@ router.get("/:shopId", (req, res) => {
   }
 
   /* ----------- ÜRÜN KARTI TASARIMI ----------- */
-
   .product-card {
     width: 100%;
     max-width: 340px;
@@ -145,7 +163,6 @@ router.get("/:shopId", (req, res) => {
   }
 
   /* ----------- BÜYÜK GÖRSEL POP-UP ----------- */
-
   #imgModal {
     position: fixed;
     top: 0;
@@ -171,7 +188,19 @@ router.get("/:shopId", (req, res) => {
 
 <div class="header" id="shopName">Alışveriş’te Yapay Zekanız</div>
 
-<div class="chat" id="chat"></div>
+<div class="chat" id="chat">
+
+  <!-- Öneri Baloncukları -->
+  <div id="suggestions" class="suggestion-container">
+    <div class="suggestion" onclick="quickAsk('Kombin önerisi istiyorum')">👗 Kombin önerisi istiyorum</div>
+    <div class="suggestion" onclick="quickAsk('Bana ürün öner')">🛍️ Bana ürün öner</div>
+    <div class="suggestion" onclick="quickAsk('Farklı renk seçenekleri göster')">🎨 Renk seçenekleri</div>
+    <div class="suggestion" onclick="quickAsk('Ayakkabı öner')">🥾 Ayakkabı öner</div>
+    <div class="suggestion" onclick="quickAsk('Hediye için ne alabilirim?')">🎁 Hediye öner</div>
+    <div class="suggestion" onclick="quickAsk('Bütçeme göre ürün öner')">💸 Bütçeme göre ürün</div>
+  </div>
+
+</div>
 
 <div class="input-box">
   <input id="msgInput" type="text" placeholder="Alışveriş için hazırım, sorunuzu yazın 🛍️" />
@@ -218,7 +247,16 @@ router.get("/:shopId", (req, res) => {
     chat.scrollTop = chat.scrollHeight;
   }
 
-  // Mağaza adı
+  /* ----------- HIZLI ÖNERİ BALONCUĞU TIKLANINCA ----------- */
+  function quickAsk(text) {
+    addBubble(text, "user");
+    sendRequest(text);
+
+    // Öneri baloncuklarını gizle
+    document.getElementById("suggestions").style.display = "none";
+  }
+
+  // Mağaza adı görüntüleme
   fetch("https://ai-shop-backend-2.onrender.com/api/shop/public/${shopId}")
     .then(r => r.json())
     .then(data => {
@@ -231,13 +269,7 @@ router.get("/:shopId", (req, res) => {
 
   addBubble("Merhaba 👋 Nasıl yardımcı olabilirim?", "ai");
 
-  async function sendMessage() {
-    const text = input.value.trim();
-    if (!text) return;
-
-    addBubble(text, "user");
-    input.value = "";
-
+  async function sendRequest(text) {
     const res = await fetch("https://ai-shop-backend-2.onrender.com/api/assistant/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -253,6 +285,16 @@ router.get("/:shopId", (req, res) => {
     if (data.reply) {
       addBubble(data.reply, "ai");
     }
+  }
+
+  async function sendMessage() {
+    const text = input.value.trim();
+    if (!text) return;
+
+    addBubble(text, "user");
+    input.value = "";
+
+    sendRequest(text);
   }
 </script>
 
