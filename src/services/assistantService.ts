@@ -6,17 +6,106 @@ import {
   normalizeText,
 } from "./productService.js";
 
-/* ----------------------------------------------------
-   FRONTEND KART FORMATLAYICI (YENİ EKLEDİK)
----------------------------------------------------- */
-function formatProductsForFrontend(products: Product[]) {
-  return products.slice(0, 4).map((p) => ({
+/* -------------------------------------------------
+ * FRONTEND İÇİN ÜRÜN FORMATLAMA + YENİ EXPORT
+ * ------------------------------------------------- */
+
+// Kullanıcıya göstereceğimiz sade ürün formatı
+function formatProductsForFrontend(products: Product[]): {
+  id: string;
+  title: string;
+  price: string;
+  url: string;
+  imageUrl: string;
+  category?: string;
+}[] {
+  return products.slice(0, 6).map((p) => ({
+    id: p.id,
     title: p.title,
-    price: p.price || "",
+    price: p.price ? String(p.price) : "",
     url: p.url || "",
-    imageUrl: p.imageUrl || "",
+    imageUrl:
+      (p as any).imageUrl ||
+      (p as any).image ||
+      (p as any).image_url ||
+      (p as any).images ||
+      "",
+    category: p.category,
   }));
 }
+
+// Basit bir eşleştirme: mesajdaki kelimelere göre ürün bulma
+function findMatchingProductsForFrontend(
+  msg: string,
+  products: Product[]
+): Product[] {
+  const t = normalizeText(msg);
+
+  if (!products.length) return [];
+
+  // Kategori anahtar kelimeleri
+  const isAyakkabi = /(ayakkabı|ayakkabi|spor ayakkabı|spor ayakkabi|sneaker|bot)/i.test(msg);
+  const isMont = /(mont|kaban|sisme mont|şişme mont|kaban)/i.test(msg);
+  const isKazak = /(kazak|sweat|sweatshirt|hoodie)/i.test(msg);
+  const isPantolon = /(pantolon|jean|kot)/i.test(msg);
+
+  let filtered = products;
+
+  if (isAyakkabi) {
+    filtered = products.filter(
+      (p) => (p.category || "").toLowerCase() === "ayakkabi"
+    );
+  } else if (isMont) {
+    filtered = products.filter(
+      (p) => normalizeText(p.title || "").includes("mont") ||
+             normalizeText(p.title || "").includes("kaban")
+    );
+  } else if (isKazak) {
+    filtered = products.filter(
+      (p) =>
+        normalizeText(p.title || "").includes("kazak") ||
+        normalizeText(p.title || "").includes("sweat")
+    );
+  } else if (isPantolon) {
+    filtered = products.filter(
+      (p) =>
+        normalizeText(p.title || "").includes("pantolon") ||
+        normalizeText(p.title || "").includes("jean")
+    );
+  }
+
+  // Hiç eşleşme yoksa tüm ürünlerden random 6 tane
+  if (!filtered.length) {
+    filtered = [...products];
+  }
+
+  // Basit shuffle
+  for (let i = filtered.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+  }
+
+  return filtered.slice(0, 6);
+}
+
+/**
+ * YENİ: Hem akıllı metin cevabı, hem de ürün listesi dönen fonksiyon
+ */
+export async function getAssistantReplyWithProducts(
+  shopId: string,
+  userMessage: string
+): Promise<{ reply: string; products: ReturnType<typeof formatProductsForFrontend> }> {
+  // Eski akıllı cevabı kullan
+  const reply = await getAssistantReply(shopId, userMessage);
+
+  // Mağaza ürünleri
+  const allProducts = await getProductsForShop(shopId);
+  const matched = findMatchingProductsForFrontend(userMessage, allProducts);
+  const formatted = formatProductsForFrontend(matched);
+
+  return { reply, products: formatted };
+}
+
 
 /* ----------------------------------------------------
    FRONTEND’E JSON FORMATINDA CEVAP DÖNEN YENİ FUNK.

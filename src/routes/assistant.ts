@@ -4,45 +4,64 @@ import { getProductsForShop } from "../services/productService.js";
 
 const router = Router();
 
-/** Ürün için kısa açıklama üret */
-function buildProductDescription(p) {
-  const desc = [];
+/* --------------------------------------------------
+   ÜRÜN İÇİN KISA + İKNA EDİCİ AÇIKLAMA
+-------------------------------------------------- */
+function buildProductDescription(p: any): string {
+  const desc: string[] = [];
 
   // Kategoriye göre yorum
   if (p.category === "ayakkabi") {
-    desc.push("Günlük kullanım için rahat bir model. Hem spor hem casual kombinlerle uyum sağlar.");
+    desc.push(
+      "Günlük kullanımda oldukça rahat bir model. Spor ve casual kombinlerle çok iyi uyum sağlar."
+    );
   }
+
   if (p.category === "giyim") {
-    desc.push("Kumaş yapısı sayesinde gün boyu konfor sunar. Çoğu kombine kolay uyum sağlar.");
+    desc.push(
+      "Kumaş yapısı sayesinde gün boyu konfor sunar. Birçok kombinle rahatlıkla kullanılabilir."
+    );
   }
+
   if (p.category === "elektronik") {
-    desc.push("Performans odaklı, günlük kullanım için stabil bir cihaz.");
+    desc.push(
+      "Günlük kullanım için yeterli performans sunan, dengeli bir ürün."
+    );
   }
 
-  // Renge göre
-  if (p.color) desc.push(`${p.color} tonları çoğu stile uyumludur.`);
+  // Renk vurgusu
+  if (p.color) {
+    desc.push(`${p.color} tonlarıyla şık ve zamansız bir görünüm sunar.`);
+  }
 
-  // Fiyata göre
-  if (p.price) desc.push(`Fiyat/performans olarak dengeli bir ürün.`);
+  // Genel ikna cümlesi
+  desc.push(
+    "Tarzını tamamlayabilecek, ihtiyaç duyduğun anlarda seni yarı yolda bırakmayacak bir ürün."
+  );
 
   return desc.join(" ");
 }
 
-/** Rastgele ürün seçimi */
-function pickRandomProducts(list, max = 3) {
+/* --------------------------------------------------
+   RASTGELE ÜRÜN SEÇ (HEP AYNI GELMESİN)
+-------------------------------------------------- */
+function pickRandomProducts(list: any[], max = 3) {
   const items = [...list];
-  const selected = [];
+  const selected: any[] = [];
 
-  while (items.length && selected.length < max) {
-    const i = Math.floor(Math.random() * items.length);
-    selected.push(items[i]);
-    items.splice(i, 1);
+  while (items.length > 0 && selected.length < max) {
+    const index = Math.floor(Math.random() * items.length);
+    selected.push(items[index]);
+    items.splice(index, 1);
   }
 
   return selected;
 }
 
-/** 🔥 GERÇEK YAPAY ZEKA CEVABI */
+/* --------------------------------------------------
+   CHAT ENDPOINT
+   POST /api/assistant/chat
+-------------------------------------------------- */
 router.post("/chat", async (req, res) => {
   try {
     const { shopId, message } = req.body;
@@ -50,41 +69,49 @@ router.post("/chat", async (req, res) => {
     if (!shopId || !message) {
       return res.status(400).json({
         ok: false,
-        reply: "shopId ve message zorunludur!"
+        reply: "shopId ve message zorunludur!",
+        products: [],
       });
     }
 
-    // AI cevabı
+    /* ---------------- AI METİN CEVABI ---------------- */
     const reply = await getAssistantReply(shopId, message);
 
-    // Ürünleri çek
+    /* ---------------- MAĞAZA ÜRÜNLERİ ---------------- */
     const allProducts = await getProductsForShop(shopId);
 
-    let products = [];
+    let products: any[] = [];
 
     if (allProducts.length > 0) {
-      const random3 = pickRandomProducts(allProducts, 3);
+      // Rastgele 3 ürün seç
+      const randomProducts = pickRandomProducts(allProducts, 3);
 
-      products = random3.map(p => ({
+      products = randomProducts.map((p) => ({
         title: p.title,
         price: p.price || "",
         url: p.url || "",
-        imageUrl: p.imageUrl || "",
-        description: buildProductDescription(p)
+        imageUrl:
+          p.imageUrl ||
+          p.image ||
+          p.image_url ||
+          p.images ||
+          "",
+        description: buildProductDescription(p),
       }));
     }
 
+    /* ---------------- RESPONSE ---------------- */
     return res.json({
       ok: true,
       reply,
-      products
+      products,
     });
-
   } catch (err) {
     console.error("CHAT ERROR:", err);
     return res.status(500).json({
       ok: false,
-      reply: "Yapay zeka cevap üretirken bir hata oluştu ❌"
+      reply: "Yapay zeka cevap üretirken bir hata oluştu ❌",
+      products: [],
     });
   }
 });
