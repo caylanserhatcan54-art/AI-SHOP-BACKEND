@@ -36,37 +36,32 @@ function findMatchingProductsForFrontend(msg, products) {
     const t = normalizeText(msg);
     if (!products.length)
         return [];
-    // Kategori anahtar kelimeleri
-    const isAyakkabi = /(ayakkabı|ayakkabi|spor ayakkabı|spor ayakkabi|sneaker|bot)/i.test(msg);
-    const isMont = /(mont|kaban|sisme mont|şişme mont|kaban)/i.test(msg);
-    const isKazak = /(kazak|sweat|sweatshirt|hoodie)/i.test(msg);
-    const isPantolon = /(pantolon|jean|kot)/i.test(msg);
-    let filtered = products;
-    if (isAyakkabi) {
-        filtered = products.filter((p) => (p.category || "").toLowerCase() === "ayakkabi");
+    const tokens = t.split(" ").filter(x => x.length > 2);
+    const scored = products.map(p => {
+        let score = 0;
+        const title = normalizeText(p.title || "");
+        const category = normalizeText(p.category || "");
+        for (const tok of tokens) {
+            if (title.includes(tok))
+                score += 10;
+            if (category.includes(tok))
+                score += 6;
+        }
+        return { product: p, score };
+    });
+    scored.sort((a, b) => b.score - a.score);
+    // skor alan ürünler varsa onları döndür
+    const matched = scored.filter(s => s.score > 0).map(s => s.product);
+    // hiç eşleşme yoksa random 6 ürün
+    if (!matched.length) {
+        const shuffled = [...products];
+        for (let i = shuffled.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+        }
+        return shuffled.slice(0, 6);
     }
-    else if (isMont) {
-        filtered = products.filter((p) => normalizeText(p.title || "").includes("mont") ||
-            normalizeText(p.title || "").includes("kaban"));
-    }
-    else if (isKazak) {
-        filtered = products.filter((p) => normalizeText(p.title || "").includes("kazak") ||
-            normalizeText(p.title || "").includes("sweat"));
-    }
-    else if (isPantolon) {
-        filtered = products.filter((p) => normalizeText(p.title || "").includes("pantolon") ||
-            normalizeText(p.title || "").includes("jean"));
-    }
-    // Hiç eşleşme yoksa tüm ürünlerden random 6 tane
-    if (!filtered.length) {
-        filtered = [...products];
-    }
-    // Basit shuffle
-    for (let i = filtered.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
-    }
-    return filtered.slice(0, 6);
+    return matched.slice(0, 6);
 }
 /**
  * YENİ: Hem akıllı metin cevabı, hem de ürün listesi dönen fonksiyon
@@ -84,17 +79,22 @@ export async function getAssistantReplyWithProducts(shopId, userMessage) {
    FRONTEND’E JSON FORMATINDA CEVAP DÖNEN YENİ FUNK.
 ---------------------------------------------------- */
 export async function processChatMessage(shopId, message) {
-    const products = await getProductsForShop(shopId);
-    // 🔥 Asıl akıllı cevap motoru
+    const scope = detectQuestionScope(message);
     const aiReply = await generateSmartReply(shopId, message);
-    // 🔥 Frontend ürün kartları
-    let matchedProducts = [];
-    if (products && products.length > 0) {
-        matchedProducts = formatProductsForFrontend(products);
+    // ❌ sohbet & genel bilgi → ürün YOK
+    if (scope === "SMALL_TALK" || scope === "GENERAL_INFO") {
+        return {
+            reply: aiReply,
+            products: [],
+        };
     }
+    // 🛒 sadece mağaza ürünü ise
+    const products = await getProductsForShop(shopId);
+    const matched = findMatchingProductsForFrontend(message, products);
+    const formatted = formatProductsForFrontend(matched);
     return {
         reply: aiReply,
-        products: matchedProducts,
+        products: formatted,
     };
 }
 let CUSTOMER_MEMORY = {
@@ -675,22 +675,9 @@ function findMatchingProducts(msg, products) {
 function formatProductSummary(p) {
     const lines = [];
     lines.push(`✨ **${p.title}**`);
-    if (p.price)
-        lines.push(`💰 Fiyat: ${p.price}`);
-    else
-        lines.push("💰 Fiyat: Güncel fiyat ürün sayfasında yer alıyor.");
-    if (p.imageUrl) {
-        lines.push(`🖼️ Görsel: ${p.imageUrl}`);
-    }
-    else if (p.image) {
-        lines.push(`🖼️ Görsel: ${p.image}`);
-    }
-    if (p.category)
-        lines.push(`📂 Kategori: ${p.category}`);
-    if (p.color)
-        lines.push(`🎨 Renk: ${p.color}`);
-    if (p.url)
-        lines.push(`🔗 Link: ${p.url}`);
+    lines.push("• Günlük kullanım için dengeli bir parça");
+    lines.push("• Kombinlemesi kolay");
+    lines.push("• Uzun süre kullanıma uygun");
     return lines.join("\n");
 }
 /**
@@ -1206,13 +1193,13 @@ export async function generateSmartReply(shopId, userMessage) {
     const msg = (userMessage || "").trim();
     if (!msg)
         return "Merhaba 👋 Nasıl yardımcı olayım?";
-    // 🔥 SORU TİPİ BELİRLEME
+    // 1️⃣ ÖNCE SORU TÜRÜ
     const scope = detectQuestionScope(msg);
-    // 🗣️ SADECE SOHBET – ÜRÜN YOK
+    // 🗣️ SADECE SOHBET
     if (scope === "SMALL_TALK") {
         return "İyiyim ve buradayım 😊 Sen nasılsın? Bugün ne bakıyoruz?";
     }
-    // 🌍 GENEL BİLGİ – MAĞAZA ÜRÜNÜ YOK
+    // 🌍 GENEL BİLGİ
     if (scope === "GENERAL_INFO") {
         const storeProducts = await getProductsForShop(shopId);
         const worldCat = detectWorldCategory(msg);
@@ -1221,12 +1208,20 @@ export async function generateSmartReply(shopId, userMessage) {
         }
         return worldKnowledgeAnswer(msg);
     }
-    const name = extractCustomerName(msg);
+    // 🛒 SADECE BURADAN SONRA ÜRÜN DEVREYE GİRER
     const products = await getProductsForShop(shopId);
+    if (!products.length) {
+        return "Bu mağazada henüz ürün yok 😊";
+    }
     const intents = detectMultipleIntents(msg);
-    const main = findMatchingProducts(msg, products)[0] || products[0] || null;
-    updateMemory(msg, products, main);
-    let reply = buildMergedResponse(intents, msg, products, main);
+    // 🔒 KESİN KATEGORİ KİLİDİ
+    let matched = findMatchingProducts(msg, products);
+    matched = hardCategoryLock(msg, matched);
+    matched = filterNeverShownProducts(matched);
+    markProductsAsShown(matched);
+    const mainProduct = matched[0] || null;
+    updateMemory(msg, products, mainProduct);
+    let reply = buildFullSmartResponse(intents[0], msg, matched, null);
     reply += replyWithMemoryHints();
     return reply;
 }
