@@ -814,6 +814,9 @@ function persuasiveEnding(intent) {
 function buildReplyForIntent(intent, userMessage, products, customerName) {
     const displayName = formatCustomerName(customerName);
     const matches = findMatchingProducts(userMessage, products);
+    let locked = hardCategoryLock(userMessage, matches);
+    locked = filterNeverShownProducts(locked);
+    markProductsAsShown(locked);
     const mainProduct = matches[0] || products[0] || null;
     const storeCategory = detectStoreCategory(products);
     const purchaseIntent = detectPurchaseIntent(userMessage);
@@ -1158,6 +1161,9 @@ function buildFullSmartResponse(intent, message, products, customerName) {
     const persuasion = persuasiveEnding(purchase);
     const empathy = empathyLine(message);
     let reply = base + tone + persuasion;
+    reply += "\n\n" + advancedCombinationEngine(mainProduct, products);
+    reply += "\n\n" + giftAdvisor(message);
+    reply += "\n\n" + softCheckoutPush(purchase);
     if (empathy)
         reply += "\n\n" + empathy;
     updateUserProfile(message, products, mainProduct);
@@ -1191,4 +1197,85 @@ export async function getAssistantReply(shopId, userMessage) {
 }
 export async function getAIResponse(shopId, userMessage) {
     return generateSmartReply(shopId, userMessage);
+}
+/* ==================================================
+   🔥 EK MODÜLLER – TAM MAĞAZA YAPAY ZEKASI
+================================================== */
+/* --------- 1️⃣ GÖSTERİLEN ÜRÜNLERİ TEKRAR ETME --------- */
+const SHOWN_PRODUCT_IDS = new Set();
+function filterNeverShownProducts(products) {
+    const fresh = products.filter(p => !SHOWN_PRODUCT_IDS.has(p.id));
+    if (!fresh.length) {
+        SHOWN_PRODUCT_IDS.clear();
+        return products;
+    }
+    return fresh;
+}
+function markProductsAsShown(products) {
+    products.forEach(p => SHOWN_PRODUCT_IDS.add(p.id));
+}
+/* --------- 2️⃣ KESİN KATEGORİ KİLİDİ --------- */
+function hardCategoryLock(message, products) {
+    const t = normalizeText(message);
+    if (/ayakkabi|sneaker|bot/.test(t))
+        return products.filter(p => p.category === "ayakkabi");
+    if (/kazak|mont|pantolon|tişört|giyim/.test(t))
+        return products.filter(p => p.category === "giyim");
+    if (/kilif|case|telefon/.test(t))
+        return products.filter(p => /kilif|case/.test(normalizeText(p.title || "")));
+    return products;
+}
+/* --------- 3️⃣ HEDİYE MOTORU --------- */
+function giftAdvisor(message) {
+    const t = normalizeText(message);
+    if (!t.includes("hediye"))
+        return "";
+    if (t.includes("anne"))
+        return "🎁 Anne için daha zarif ve günlük kullanıma uygun ürünler genelde daha çok beğenilir.";
+    if (t.includes("baba") || t.includes("erkek"))
+        return "🎁 Erkekler için sade, kullanışlı ve zamansız ürünler daha mantıklı olur.";
+    if (t.includes("sevgili"))
+        return "❤️ Sevgili için biraz daha özel ve tarz yansıtan parçalar güzel olur.";
+    return "🎁 Hediye alırken kullanışlılık ve tarz uyumu en önemli kriterdir.";
+}
+/* --------- 4️⃣ KOMBIN MOTORU (GERÇEK) --------- */
+function advancedCombinationEngine(main, products) {
+    if (!main)
+        return "";
+    const lines = [];
+    lines.push("🧩 Bu ürünle çok güzel gidecek kombin önerisi:");
+    if (main.category === "ayakkabi") {
+        const alt = products.find(p => /pantolon|jean/.test(normalizeText(p.title || "")));
+        const ust = products.find(p => /kazak|sweat|tişört/.test(normalizeText(p.title || "")));
+        if (alt)
+            lines.push(`👖 ${alt.title}`);
+        if (ust)
+            lines.push(`👕 ${ust.title}`);
+    }
+    if (main.category === "giyim") {
+        const ayk = products.find(p => p.category === "ayakkabi");
+        if (ayk)
+            lines.push(`👟 ${ayk.title}`);
+    }
+    lines.push("✨ Bu kombin günlük kullanım için çok dengeli durur.");
+    return lines.join("\n");
+}
+/* --------- 5️⃣ CÜMLE VARYASYON MOTORU --------- */
+function randomPitch() {
+    const variants = [
+        "Bu ürün tam sana göre olabilir.",
+        "Bunu tercih edenler genelde çok memnun kalıyor.",
+        "Günlük kullanım için oldukça mantıklı bir seçim.",
+        "Fiyatına göre sundukları gerçekten iyi.",
+        "Tarzını yormadan şık duracak bir parça."
+    ];
+    return variants[Math.floor(Math.random() * variants.length)];
+}
+/* --------- 6️⃣ YUMUŞAK SATIN ALMA YÖNLENDİRME --------- */
+function softCheckoutPush(intent) {
+    if (intent === "HIGH")
+        return "🛒 Hazırsan sepete ekleyip devam etmek mantıklı olabilir.";
+    if (intent === "MID")
+        return "🛍️ Sepete ekleyip biraz daha düşünebilirsin.";
+    return "İstersen başka alternatifler de gösterebilirim 😊";
 }
