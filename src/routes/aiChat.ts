@@ -1,7 +1,5 @@
-// src/routes/aiChat.ts
-
 import { Router } from "express";
-import { generateSmartReply } from "../services/assistantService.js";
+import { processChatMessage } from "../services/assistantService.js";
 
 const router = Router();
 
@@ -15,11 +13,9 @@ router.post("/", async (req, res) => {
       });
     }
 
-    const reply = await generateSmartReply(shopId, message);
+    const result = await processChatMessage(shopId, message);
 
-    return res.json({
-      reply
-    });
+    return res.json(result);
   } catch (err) {
     console.error("❌ AI Chat Error:", err);
     return res.status(500).json({
