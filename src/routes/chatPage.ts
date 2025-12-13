@@ -15,438 +15,250 @@ router.get("/:shopId", (req, res) => {
 <title>AI Shop Assistant</title>
 
 <style>
-  * {
-    box-sizing: border-box;
-  }
+* { box-sizing: border-box; }
 
-  body {
-    margin: 0;
-    height: 100vh;
-    background: #14151a;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
-    display: flex;
-    flex-direction: column;
-    color: #f5f5f5;
-  }
+body {
+  margin: 0;
+  height: 100vh;
+  background: #14151a;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  display: flex;
+  flex-direction: column;
+  color: #f5f5f5;
+}
 
-  .header {
-    padding: 14px 18px;
-    text-align: center;
-    font-size: 16px;
-    font-weight: 600;
-    background: radial-gradient(circle at top left, #1f2933, #111218);
-    border-bottom: 1px solid #262832;
-    letter-spacing: 0.02em;
-  }
+.header {
+  padding: 14px 18px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  background: radial-gradient(circle at top left, #1f2933, #111218);
+  border-bottom: 1px solid #262832;
+}
 
-  .chat {
-    flex: 1;
-    overflow-y: auto;
-    padding: 18px 16px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
+.chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
 
-  .bubble-ai,
-  .bubble-user {
-    max-width: 85%;
-    padding: 12px 14px;
-    border-radius: 18px;
-    font-size: 14px;
-    line-height: 1.5;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.35);
-  }
+.bubble-ai,
+.bubble-user {
+  max-width: 85%;
+  padding: 12px 14px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.35);
+}
 
-  .bubble-ai {
-    background: #22252f;
-    border-top-left-radius: 6px;
-    color: #e8e8e8;
-  }
+.bubble-ai {
+  background: #22252f;
+  border-top-left-radius: 6px;
+}
 
-  .bubble-user {
-    margin-left: auto;
-    background: linear-gradient(135deg, #4f46e5, #22d3ee);
-    border-top-right-radius: 6px;
-    color: white;
-  }
+.bubble-user {
+  margin-left: auto;
+  background: linear-gradient(135deg, #4f46e5, #22d3ee);
+  border-top-right-radius: 6px;
+  color: #fff;
+}
 
-  .input-box {
-    padding: 12px 10px 14px;
-    background: #111218;
-    border-top: 1px solid #262832;
-    display: flex;
-    gap: 10px;
-  }
+.input-box {
+  padding: 12px;
+  background: #111218;
+  border-top: 1px solid #262832;
+  display: flex;
+  gap: 10px;
+}
 
-  .input-box input {
-    flex: 1;
-    background: #1b1d25;
-    border: 1px solid #303341;
-    padding: 12px 14px;
-    border-radius: 999px;
-    outline: none;
-    color: #f5f5f5;
-    font-size: 14px;
-  }
+.input-box input {
+  flex: 1;
+  background: #1b1d25;
+  border: 1px solid #303341;
+  padding: 12px 14px;
+  border-radius: 999px;
+  color: #fff;
+}
 
-  .input-box input::placeholder {
-    color: #777b8a;
-  }
+.input-box button {
+  width: 46px;
+  height: 46px;
+  background: linear-gradient(135deg, #14b8a6, #22d3ee);
+  border-radius: 999px;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+}
 
-  .input-box button {
-    width: 46px;
-    height: 46px;
-    background: linear-gradient(135deg, #14b8a6, #22d3ee);
-    border-radius: 999px;
-    border: none;
-    color: #0b1020;
-    font-size: 18px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
+/* ÜRÜN KARTI */
+.product-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
 
-  /* ---------------- SORU BALONCUKLARI ---------------- */
+.product-card {
+  width: 210px;
+  background: #1b1e27;
+  border-radius: 16px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
 
-  .starter-bubbles {
-    display: flex;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 8px;
-    margin: 8px auto 16px;
-    max-width: 520px;
-  }
+.product-card img {
+  width: 100%;
+  border-radius: 12px;
+  cursor: pointer;
+  object-fit: cover;
+}
 
-  .starter-bubble {
-    padding: 8px 12px;
-    border-radius: 999px;
-    background: rgba(34, 211, 238, 0.12);
-    border: 1px solid rgba(45, 212, 191, 0.45);
-    color: #e0fbff;
-    font-size: 13px;
-    cursor: pointer;
-    transition: all 0.15s ease-out;
-    white-space: nowrap;
-  }
+.product-title { font-size: 13px; font-weight: 600; }
+.product-price { font-size: 13px; color: #7dd3fc; }
+.product-cta { font-size: 12px; color: #a5b4fc; }
 
-  .starter-bubble:hover {
-    background: rgba(34, 211, 238, 0.25);
-    transform: translateY(-1px);
-  }
+.product-link {
+  margin-top: 4px;
+  padding: 8px;
+  background: linear-gradient(135deg, #4f46e5, #22c1c3);
+  border-radius: 999px;
+  text-align: center;
+  color: #fff;
+  text-decoration: none;
+  font-size: 13px;
+}
 
-  /* ---------------- ÜRÜN KARTI ---------------- */
+#imgModal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: none;
+  justify-content: center;
+  align-items: center;
+}
 
-  .product-wrapper {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-
-  .product-card {
-    width: 210px;
-    background: #1b1e27;
-    border-radius: 16px;
-    padding: 10px;
-    box-shadow: 0 4px 14px rgba(0,0,0,0.5);
-    color: white;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .product-card img {
-    width: 100%;
-    border-radius: 12px;
-    cursor: pointer;
-    transition: 0.2s;
-    background: #000;
-    object-fit: cover;
-  }
-
-  .product-card img:hover {
-    opacity: 0.9;
-  }
-
-  .product-title {
-    font-size: 13px;
-    font-weight: 600;
-    line-height: 1.3;
-  }
-
-  .product-price {
-    font-size: 13px;
-    color: #7dd3fc;
-    font-weight: 500;
-  }
-
-  .product-cta {
-    font-size: 12px;
-    color: #a5b4fc;
-  }
-
-  .product-link {
-    margin-top: 4px;
-    padding: 8px 10px;
-    background: linear-gradient(135deg, #4f46e5, #22c1c3);
-    border-radius: 999px;
-    text-align: center;
-    color: white;
-    font-size: 13px;
-    text-decoration: none;
-    font-weight: 500;
-    display: inline-block;
-  }
-
-  /* ---------------- BÜYÜK GÖRSEL POPUP ---------------- */
-
-  #imgModal {
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.85);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 50;
-  }
-
-  #imgModal img {
-    max-width: 92%;
-    max-height: 92%;
-    border-radius: 18px;
-  }
-
-  @media (max-width: 600px) {
-    .product-card {
-      width: 100%;
-      max-width: 320px;
-    }
-  }
+#imgModal img {
+  max-width: 92%;
+  max-height: 92%;
+  border-radius: 18px;
+}
 </style>
 </head>
 
 <body>
 
 <div class="header" id="shopName">Alışveriş’te Yapay Zekanız</div>
-
-<div class="chat" id="chat">
-  <div id="starterArea">
-    <div class="starter-bubbles">
-      <div class="starter-bubble" data-q="Bana ürün öner.">Bana ürün öner ✨</div>
-      <div class="starter-bubble" data-q="Kombin önerisi yapar mısın?">Kombin önerisi iste 👗</div>
-      <div class="starter-bubble" data-q="Spor ayakkabı öner.">Spor ayakkabı öner 👟</div>
-      <div class="starter-bubble" data-q="Kış için mont öner.">Kışlık mont öner 🧥</div>
-      <div class="starter-bubble" data-q="Bütçeme uygun ürün öner.">Bütçeme göre ürün 💸</div>
-      <div class="starter-bubble" data-q="Hediye almak istiyorum, ne önerirsin?">Hediye öner 🎁</div>
-    </div>
-  </div>
-</div>
+<div class="chat" id="chat"></div>
 
 <div class="input-box">
-  <input id="msgInput" type="text" placeholder="Alışveriş için hazırım, sorunuzu yazın 🛍️" />
+  <input id="msgInput" placeholder="Sorunu yaz..." />
   <button id="sendBtn">➤</button>
 </div>
 
-<!-- IMAGE MODAL -->
-<div id="imgModal">
-  <img id="modalImage">
-</div>
+<div id="imgModal"><img id="modalImage"></div>
 
 <script>
-  const chat = document.getElementById("chat");
-  const input = document.getElementById("msgInput");
-  const sendBtn = document.getElementById("sendBtn");
-  const starterArea = document.getElementById("starterArea");
-  const shopId = "${shopId}";
+const API_BASE = window.location.origin;
+const shopId = "${shopId}";
+const chat = document.getElementById("chat");
+const input = document.getElementById("msgInput");
 
-  const imgModal = document.getElementById("imgModal");
-  const modalImage = document.getElementById("modalImage");
+function addBubble(text, sender) {
+  const div = document.createElement("div");
+  div.className = sender === "user" ? "bubble-user" : "bubble-ai";
+  div.innerText = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
 
-  imgModal.addEventListener("click", () => {
-    imgModal.style.display = "none";
+function openImage(url) {
+  document.getElementById("modalImage").src = url;
+  document.getElementById("imgModal").style.display = "flex";
+}
+
+document.getElementById("imgModal").onclick = () =>
+  document.getElementById("imgModal").style.display = "none";
+
+function addProductGroup(products) {
+  if (!products || !products.length) return;
+
+  const bubble = document.createElement("div");
+  bubble.className = "bubble-ai";
+
+  const wrapper = document.createElement("div");
+  wrapper.className = "product-wrapper";
+
+  products.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "product-card";
+
+    const img = document.createElement("img");
+    const src = Array.isArray(p.imageUrl) ? p.imageUrl[0] : p.imageUrl;
+    img.src = src || "";
+    img.onclick = () => openImage(src);
+
+    const title = document.createElement("div");
+    title.className = "product-title";
+    title.innerText = p.title || "";
+
+    const price = document.createElement("div");
+    price.className = "product-price";
+    price.innerText = p.price || "";
+
+    const link = document.createElement("a");
+    link.className = "product-link";
+    link.href = p.url || "#";
+    link.target = "_blank";
+    link.innerText = "Ürünü Gör →";
+
+    card.append(img, title, price, link);
+    wrapper.appendChild(card);
   });
 
-  function openImage(url) {
-    if (!url) return;
-    modalImage.src = url;
-    imgModal.style.display = "flex";
-  }
-
-  function addBubble(text, sender) {
-    if (!text) return;
-
-    const cleaned = cleanReplyText(text);
-
-    const div = document.createElement("div");
-    div.className = sender === "user" ? "bubble-user" : "bubble-ai";
-    div.innerText = cleaned;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  function cleanReplyText(text) {
-    // Ürün satırlarını ve gereksiz meta bilgiyi temizle
-    const lines = String(text).split("\\n");
-    const filtered = lines.filter((line) => {
-      const t = line.trim();
-      if (!t) return false;
-      if (t.startsWith("✨")) return false;
-      if (t.startsWith("💰")) return false;
-      if (t.startsWith("🖼️")) return false;
-      if (t.startsWith("📂")) return false;
-      if (t.startsWith("🎨")) return false;
-      if (t.startsWith("🔗")) return false;
-      if (t.startsWith("🧠 Hatırladıklarım")) return false;
-      if (t.startsWith("🛍️ Son baktığın kategori")) return false;
-      return true;
-    });
-
-    return filtered.join("\\n").trim();
-  }
-
-  function buildPersuasiveText(p) {
-    const candidates = [
-      "Bu model günlük kullanımda hem rahat hem de şık duracak bir ürün.",
-      "Son zamanlarda en çok tercih edilen parçalardan biri, gözden kaçmasın.",
-      "Fiyat / performans olarak oldukça mantıklı bir tercih gibi görünüyor.",
-      "Tarzını yükseltecek, kombinlerinde yıldız parça olabilir.",
-      "Rahatlığı ve görünümüyle öne çıkan bir model gibi duruyor.",
-      "Hem sade hem modern çizgisiyle çoğu ortama uyum sağlayabilir."
-    ];
-
-    return candidates[Math.floor(Math.random() * candidates.length)];
-  }
-
-  function addProductGroup(products) {
-    if (!products || !products.length) return;
-
-    const wrapperBubble = document.createElement("div");
-    wrapperBubble.className = "bubble-ai";
-
-    const wrapper = document.createElement("div");
-    wrapper.className = "product-wrapper";
-
-    products.forEach((p) => {
-      const card = document.createElement("div");
-      card.className = "product-card";
-
-      const imgSrc = Array.isArray(p.imageUrl)
-  ? p.imageUrl[0]
-  : p.imageUrl || p.image || "";
-
-img.src = imgSrc;
-img.onclick = () => openImage(imgSrc);
-
-      const title = document.createElement("div");
-      title.className = "product-title";
-      title.innerText = p.title || "";
-
-      const price = document.createElement("div");
-      price.className = "product-price";
-      price.innerText = p.price || "";
-
-      const cta = document.createElement("div");
-      cta.className = "product-cta";
-      cta.innerText = buildPersuasiveText(p);
-
-      const link = document.createElement("a");
-      link.className = "product-link";
-      link.href = p.url || "#";
-      link.target = "_blank";
-      link.innerText = "Ürünü Gör →";
-
-      card.appendChild(img);
-      card.appendChild(title);
-      if (p.price) card.appendChild(price);
-      card.appendChild(cta);
-      card.appendChild(link);
-
-      wrapper.appendChild(card);
-    });
-
-    wrapperBubble.appendChild(wrapper);
-    chat.appendChild(wrapperBubble);
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  function hideStarter() {
-    if (!starterArea) return;
-    starterArea.style.display = "none";
-  }
-
-  async function sendMessage(textFromBubble) {
-    const text = (textFromBubble || input.value || "").trim();
-    if (!text) return;
-
-    hideStarter();
-    addBubble(text, "user");
-    input.value = "";
-
-    try {
-      const res = await fetch("https://ai-shop-backend-2.onrender.com/api/assistant/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shopId, message: text })
-      });
-
-      const data = await res.json();
-
-      if (Array.isArray(data.products) && data.products.length) {
-        // Aynı anda çok ürün gelirse biraz karışık olmasın diye max 4 göster
-        const products = data.products.slice(0, 4);
-        addProductGroup(products);
-      }
-
-      if (data.reply && data.reply.includes("Henüz bu mağazada ürün yok")) {
-  addBubble(data.reply, "ai");
-  return; // ⛔ ürün kartı basma
+  bubble.appendChild(wrapper);
+  chat.appendChild(bubble);
 }
 
-if (data.reply) {
-  addBubble(data.reply, "ai");
-}
-    } catch (e) {
-      console.error(e);
-      addBubble("Şu anda bir bağlantı sorunu yaşıyorum, biraz sonra tekrar dener misin? ❌", "ai");
+async function sendMessage() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  addBubble(text, "user");
+  input.value = "";
+
+  try {
+    const res = await fetch(API_BASE + "/api/assistant/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shopId, message: text })
+    });
+
+    const data = await res.json();
+
+    if (data.reply) addBubble(data.reply, "ai");
+    if (Array.isArray(data.products) && data.products.length) {
+      addProductGroup(data.products.slice(0, 4));
     }
+
+  } catch {
+    addBubble("Bağlantı hatası ❌", "ai");
   }
+}
 
-  // Mağaza adını çek ve header’a yaz
-  fetch("https://ai-shop-backend-2.onrender.com/api/shop/public/${shopId}")
-    .then(r => r.json())
-    .then(data => {
-      if (data.ok) {
-        const name =
-          (data.shop.shopName || data.shop.shopId || "").toString().toUpperCase();
-        document.getElementById("shopName").innerText =
-          name + " – Alışveriş’te Yapay Zekanız";
-      }
-    })
-    .catch(() => {});
+document.getElementById("sendBtn").onclick = sendMessage;
+input.onkeydown = e => e.key === "Enter" && sendMessage();
 
-  // Başlangıç mesajı
-  addBubble("Merhaba 👋 Nasıl yardımcı olabilirim? Ürün, kombin veya bütçene göre seçim yapabilirim.", "ai");
-
-  // Input / buton events
-  sendBtn.addEventListener("click", () => sendMessage());
-  input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") sendMessage();
-  });
-
-  // Starter baloncukları
-  document.querySelectorAll(".starter-bubble").forEach((el) => {
-    el.addEventListener("click", () => {
-      const q = el.getAttribute("data-q") || "";
-      sendMessage(q);
-    });
-  });
-
+addBubble("Merhaba 👋 Nasıl yardımcı olabilirim?", "ai");
 </script>
 
 </body>
 </html>
-  `;
+`;
 
   res.send(html);
 });
