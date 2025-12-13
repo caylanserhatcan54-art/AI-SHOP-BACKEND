@@ -33,13 +33,14 @@ router.get("/:shopId", (req, res) => {
     border-bottom: 1px solid #262832;
   }
   .chat {
-    flex: 1;
-    overflow-y: auto;
-    padding: 18px 16px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
+  flex: 1;
+  min-height: 0;   /* 🔥 INPUT ÇALIŞMASI İÇİN ŞART */
+  overflow-y: auto;
+  padding: 18px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
   .bubble-ai, .bubble-user {
     max-width: 85%;
     padding: 12px 14px;
@@ -58,12 +59,14 @@ router.get("/:shopId", (req, res) => {
     color: white;
   }
   .input-box {
-    padding: 12px;
-    background: #111218;
-    border-top: 1px solid #262832;
-    display: flex;
-    gap: 10px;
-  }
+  padding: 12px 10px 14px;
+  background: #111218;
+  border-top: 1px solid #262832;
+  display: flex;
+  gap: 10px;
+  position: relative;
+  z-index: 10; /* 🔥 ÜSTTE KALSIN */
+}
   .input-box input {
     flex: 1;
     background: #1b1d25;
@@ -232,7 +235,10 @@ router.get("/:shopId", (req, res) => {
     const text = (textFromBubble || input.value).trim();
     if (!text) return;
 
-    if (starterArea) starterArea.style.display = "none";
+   if (starterArea) {
+  starterArea.style.display = "none";
+  starterArea.style.pointerEvents = "none"; // 🔥 input’u bloklamasın
+}
     addBubble(text, "user");
     input.value = "";
 
