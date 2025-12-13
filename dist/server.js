@@ -9,7 +9,7 @@ import assistantRouter from "./routes/assistant.js";
 import shopRoutes from "./routes/shoproutes.js";
 import chatPage from "./routes/chatPage.js";
 import productImportRoutes from "./routes/productImport.js";
-import aiChatRoute from "./routes/aiChat";
+import aiChatRouter from "./routes/aiChat.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const app = express();
@@ -23,7 +23,7 @@ app.use("/api/assistant", assistantRouter);
 app.use("/api/shop", shopRoutes);
 app.use("/chat", chatPage);
 app.use("/api/product", productImportRoutes);
-app.use("/api/ai", aiChatRoute);
+app.use("/api/chat", aiChatRouter);
 // STATIC QR SERVING
 app.use("/qr", express.static(path.join(process.cwd(), "public", "qr")));
 // DEFAULT TEST ROUTE
