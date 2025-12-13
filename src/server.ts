@@ -25,11 +25,10 @@ app.use(express.json());
 app.use(express.static(path.join(process.cwd(), "public")));
 
 // ROUTES
-app.use("/api/assistant", assistantRouter);
+app.use("/api/assistant", aiChatRouter);
 app.use("/api/shop", shopRoutes);
 app.use("/chat", chatPage);
 app.use("/api/product", productImportRoutes);
-app.use("/api/chat", aiChatRouter);
 
 // STATIC QR SERVING
 app.use("/qr", express.static(path.join(process.cwd(), "public", "qr")));
