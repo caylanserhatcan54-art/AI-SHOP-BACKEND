@@ -13,33 +13,15 @@ router.post("/chat", async (req, res) => {
   try {
     const { shopId, message } = req.body;
 
-    // 🔒 ZORUNLU KONTROLLER
-    if (!shopId || typeof shopId !== "string") {
-      return res.status(400).json({
-        reply: "shopId zorunludur ❌",
-        products: [],
-      });
-    }
-
-    if (!message || typeof message !== "string") {
-      return res.status(400).json({
-        reply: "Mesaj boş olamaz 😊",
-        products: [],
-      });
+    if (!shopId || !message) {
+      return res.status(400).json({ reply: "Eksik bilgi", products: [] });
     }
 
     const result = await processChatMessage(shopId, message);
-
-    return res.json({
-      reply: result.reply,
-      products: result.products,
-    });
-  } catch (err) {
-    console.error("❌ ASSISTANT /chat ERROR:", err);
-    return res.status(500).json({
-      reply: "Şu anda geçici bir sorun var, biraz sonra tekrar dener misin? 🙏",
-      products: [],
-    });
+    return res.json(result);
+  } catch (e) {
+    console.error(e);
+    return res.status(500).json({ reply: "Sunucu hatası", products: [] });
   }
 });
 

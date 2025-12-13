@@ -2,16 +2,16 @@
 import { getProductsForShop, normalizeText, } from "./productService.js";
 function detectQuestionScope(msg) {
     const t = normalizeText(msg);
-    // tamamen sohbet
-    if (/nasılsın|nasilsin|naber|ne yapıyorsun|napıyorsun|canım sıkıldı|sıkıldım/i.test(msg)) {
+    if (/canım sıkıldı|sıkıldım|moralim bozuk|üzgünüm/i.test(t)) {
+        return "EMOTIONAL";
+    }
+    if (/nasılsın|naber|merhaba|selam/i.test(t)) {
         return "SMALL_TALK";
     }
-    // ürün dışı genel bilgi
-    if (/nasıl kullanılır|ne işe yarar|faydaları|bahçe|temizlik|şampuan|tıraş|bitki çayı|ilaç|krem|hırdavat|marangoz/i.test(t)) {
+    if (/nasıl kullanılır|ne işe yarar|bahçe|temizlik|ilaç|krem/i.test(t)) {
         return "GENERAL_INFO";
     }
-    // geri kalan = mağaza ürünü
-    return "STORE_PRODUCT";
+    return "PRODUCT_REQUEST";
 }
 /* -------------------------------------------------
  * FRONTEND İÇİN ÜRÜN FORMATLAMA + YENİ EXPORT
