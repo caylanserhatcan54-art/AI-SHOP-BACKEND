@@ -211,41 +211,50 @@ export function detectBrandGuess(title: string): string | undefined {
    TÜM PLATFORM ÜRÜNLERİNİ FIRESTORE'DAN ÇEK
 ------------------------------------------------------------- */
 export async function getProductsForShop(shopId: string): Promise<Product[]> {
- const platforms = [
-  "trendyol",
-  "hepsiburada",
-  "n11",
-  "amazon",
-  "ciceksepeti",
-  "shopier",
-  "ikas",
-  "shopify",
-  "unknown" // güvenlik için
-];
-
   const products: Product[] = [];
 
-  for (const platform of platforms) {
-    const snap = await db
-      .collection("magazalar")
-      .doc(shopId)
-      .collection("platformlar")
-      .doc(platform)
+  // 🔥 Platformları DİNAMİK çek
+  const platformsSnap = await db
+    .collection("magazalar")
+    .doc(shopId)
+    .collection("platformlar")
+    .get();
+
+  if (platformsSnap.empty) {
+    console.log("⚠️ Platform yok:", shopId);
+    return [];
+  }
+
+  for (const platformDoc of platformsSnap.docs) {
+    const platform = platformDoc.id;
+
+    const productsSnap = await platformDoc.ref
       .collection("urunler")
       .get();
 
-    if (snap.empty) continue;
+    if (productsSnap.empty) continue;
 
-    snap.forEach((docSnap) => {
+    productsSnap.forEach((docSnap) => {
       const data = docSnap.data() || {};
+
+      // 🔥 GÖRSELİ NETLEŞTİR
+      let imageUrl = "";
+      if (Array.isArray(data.images) && data.images.length) {
+        imageUrl = data.images[0];
+      } else {
+        imageUrl =
+          data.imageUrl ||
+          data.image ||
+          data.image_url ||
+          "";
+      }
 
       products.push({
         id: docSnap.id,
         title: data.baslik || data.title || "",
-        price: data.fiyat || data.price,
-        url: data.URL || data.url,
-        imageUrl:
-          data.image || data.imageUrl || data.image_url || data.images,
+        price: data.fiyat || data.price || "",
+        url: data.URL || data.url || "",
+        imageUrl,
         platform,
         category: detectCategoryFromTitle(data.baslik || data.title || ""),
         color: detectColorFromTitle(data.baslik || data.title || ""),
@@ -256,5 +265,6 @@ export async function getProductsForShop(shopId: string): Promise<Product[]> {
     });
   }
 
+  console.log("✅ TOPLAM ÜRÜN SAYISI:", products.length);
   return products;
 }

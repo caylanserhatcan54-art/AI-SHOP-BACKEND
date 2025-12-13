@@ -381,7 +381,7 @@ img.onclick = () => openImage(imgSrc);
     input.value = "";
 
     try {
-      const res = await fetch("https://ai-shop-backend-2.onrender.com/api/assistant", {
+      const res = await fetch("https://ai-shop-backend-2.onrender.com/api/assistant/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ shopId, message: text })
