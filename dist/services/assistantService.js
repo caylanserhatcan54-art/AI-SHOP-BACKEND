@@ -80,30 +80,30 @@ export async function getAssistantReplyWithProducts(shopId, userMessage) {
 ---------------------------------------------------- */
 export async function processChatMessage(shopId, message) {
     const scope = detectQuestionScope(message);
-    // 🔥 AI cevabı (ürün yoksa mesajı zaten burada söylüyor)
-    const aiReply = await generateSmartReply(shopId, message);
-    // 🗣️ Sohbet & genel bilgi → ASLA ürün dönme
+    // 🛒 Ürünleri çek
+    const products = await getProductsForShop(shopId);
+    // 🗣️ Small talk / genel sohbet
     if (scope === "SMALL_TALK" || scope === "GENERAL_INFO") {
+        const reply = await generateSmartReply(shopId, message);
         return {
-            reply: aiReply,
+            reply,
             products: [],
         };
     }
-    // 🛒 Ürünleri al
-    const products = await getProductsForShop(shopId);
-    // ❌ Ürün yoksa frontend’e BOŞ ürün gönder
-    // (UI artık tekrar "ürün yok" yazmayacak)
+    // ❌ Ürün yoksa
     if (!products.length) {
         return {
-            reply: aiReply,
+            reply: "Bu mağazada henüz ürün yok 😊",
             products: [],
         };
     }
-    // ✅ Ürün varsa eşleştir
+    // =================================================
+    // 🔥 ÜRÜN VAR → AI REPLY’Yİ TAMAMEN DEVRE DIŞI
+    // =================================================
     const matched = findMatchingProductsForFrontend(message, products);
     const formatted = formatProductsForFrontend(matched);
     return {
-        reply: aiReply,
+        reply: "Bunlar ilgini çekebilir 😊",
         products: formatted,
     };
 }
@@ -1220,9 +1220,11 @@ export async function generateSmartReply(shopId, userMessage) {
     }
     // 🛒 SADECE BURADAN SONRA ÜRÜN DEVREYE GİRER
     const products = await getProductsForShop(shopId);
-    if (!products.length) {
+    if (!products || products.length === 0) {
         return "Bu mağazada henüz ürün yok 😊";
     }
+    // 🔥 DEBUG (geçici)
+    console.log("🟢 Ürün bulundu:", products.length);
     const intents = detectMultipleIntents(msg);
     // 🔒 KESİN KATEGORİ KİLİDİ
     let matched = findMatchingProducts(msg, products);
@@ -1379,12 +1381,21 @@ function markProductsAsShown(products) {
 /* --------- 2️⃣ KESİN KATEGORİ KİLİDİ --------- */
 function hardCategoryLock(message, products) {
     const t = normalizeText(message);
-    if (/ayakkabi|sneaker|bot/.test(t))
-        return products.filter(p => p.category === "ayakkabi");
-    if (/kazak|mont|pantolon|tişört|giyim/.test(t))
-        return products.filter(p => p.category === "giyim");
-    if (/kilif|case|telefon/.test(t))
-        return products.filter(p => /kilif|case/.test(normalizeText(p.title || "")));
+    // 👟 AYAKKABI
+    if (/ayakkabi|sneaker|bot/.test(t)) {
+        const filtered = products.filter(p => p.category === "ayakkabi");
+        return filtered.length ? filtered : products; // 🔥 fallback
+    }
+    // 👕 GİYİM
+    if (/kazak|mont|pantolon|tişört|tisort|giyim/.test(t)) {
+        const filtered = products.filter(p => p.category === "giyim");
+        return filtered.length ? filtered : products; // 🔥 fallback
+    }
+    // 📱 TELEFON / KILIF
+    if (/kilif|case|telefon/.test(t)) {
+        const filtered = products.filter(p => /kilif|case/.test(normalizeText(p.title || "")));
+        return filtered.length ? filtered : products; // 🔥 fallback
+    }
     return products;
 }
 /* --------- 3️⃣ HEDİYE MOTORU --------- */

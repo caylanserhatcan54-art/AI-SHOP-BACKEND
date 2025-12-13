@@ -1,8 +1,8 @@
-// src/routes/productImport.ts
-import { Router } from "express";
 import { db } from "../config/firebaseAdmin.js";
 
-
+/* -------------------------------------------------------------
+   PRODUCT TYPE
+------------------------------------------------------------- */
 export interface Product {
   id: string;
   title: string;
@@ -37,183 +37,101 @@ export function normalizeText(str: string): string {
 }
 
 /* -------------------------------------------------------------
-   Renk tahmini
-------------------------------------------------------------- */
-export function detectColorFromTitle(title: string): string | undefined {
-  const t = normalizeText(title);
-  const colors = [
-    { keyword: "siyah", label: "siyah" },
-    { keyword: "black", label: "siyah" },
-    { keyword: "beyaz", label: "beyaz" },
-    { keyword: "white", label: "beyaz" },
-    { keyword: "kirmizi", label: "kırmızı" },
-    { keyword: "red", label: "kırmızı" },
-    { keyword: "mavi", label: "mavi" },
-    { keyword: "blue", label: "mavi" },
-    { keyword: "lacivert", label: "lacivert" },
-    { keyword: "navy", label: "lacivert" },
-    { keyword: "yesil", label: "yeşil" },
-    { keyword: "green", label: "yeşil" },
-    { keyword: "gri", label: "gri" },
-    { keyword: "gray", label: "gri" },
-    { keyword: "pembe", label: "pembe" },
-    { keyword: "pink", label: "pembe" },
-    { keyword: "mor", label: "mor" },
-    { keyword: "turuncu", label: "turuncu" },
-    { keyword: "orange", label: "turuncu" },
-    { keyword: "kahverengi", label: "kahverengi" },
-    { keyword: "brown", label: "kahverengi" },
-    { keyword: "bej", label: "bej" },
-    { keyword: "beige", label: "bej" },
-    { keyword: "altin", label: "altın" },
-    { keyword: "gold", label: "altın" },
-    { keyword: "gumus", label: "gümüş" },
-    { keyword: "silver", label: "gümüş" },
-  ];
-
-  for (const c of colors) {
-    if (t.includes(c.keyword)) return c.label;
-  }
-
-  return undefined;
-}
-
-/* -------------------------------------------------------------
-   Kategori tahmini
+   KATEGORİ TESPİT
 ------------------------------------------------------------- */
 export function detectCategoryFromTitle(title: string): string {
   const t = normalizeText(title);
 
   if (
-    t.includes("polo") ||
     t.includes("tisort") ||
-    t.includes("t shirt") ||
     t.includes("gomlek") ||
-    t.includes("kaban") ||
-    t.includes("mont") ||
     t.includes("kazak") ||
-    t.includes("etek") ||
-    t.includes("elbise") ||
+    t.includes("mont") ||
+    t.includes("ceket") ||
     t.includes("pantolon") ||
-    t.includes("ceket")
-  )
-    return "giyim";
+    t.includes("elbise")
+  ) return "giyim";
 
   if (
     t.includes("ayakkabi") ||
     t.includes("sneaker") ||
     t.includes("bot") ||
-    t.includes("sandalet") ||
     t.includes("terlik")
-  )
-    return "ayakkabi";
+  ) return "ayakkabi";
 
   if (
-    t.includes("laptop") ||
-    t.includes("notebook") ||
-    t.includes("bilgisayar") ||
-    t.includes("monitor") ||
-    t.includes("klavye") ||
-    t.includes("mouse") ||
     t.includes("telefon") ||
-    t.includes("smartphone") ||
     t.includes("kulaklik") ||
-    t.includes("televizyon") ||
     t.includes("tablet") ||
-    t.includes("ssd") ||
-    t.includes("ram")
-  )
-    return "elektronik";
-
-  if (
-    t.includes("oyuncak") ||
-    t.includes("lego") ||
-    t.includes("bebek") ||
-    t.includes("figur") ||
-    t.includes("araba oyuncak")
-  )
-    return "oyuncak";
-
-  if (
-    t.includes("cadir") ||
-    t.includes("kamp") ||
-    t.includes("mat") ||
-    t.includes("uyku tulumu") ||
-    t.includes("outdoor") ||
-    t.includes("trekking")
-  )
-    return "kamp-outdoor";
-
-  if (
-    t.includes("matkap") ||
-    t.includes("vida") ||
-    t.includes("tornavida") ||
-    t.includes("anahtar takimi") ||
-    t.includes("hirdavat") ||
-    t.includes("pense") ||
-    t.includes("civi")
-  )
-    return "hirdavat";
-
-  if (
-    t.includes("top") ||
-    t.includes("forma") ||
-    t.includes("spor") ||
-    t.includes("dumbbell") ||
-    t.includes("fitness")
-  )
-    return "spor";
+    t.includes("bilgisayar")
+  ) return "elektronik";
 
   return "genel";
 }
 
 /* -------------------------------------------------------------
-   Materyal tahmini
+   RENK TESPİT
 ------------------------------------------------------------- */
-export function detectMaterialGuess(title: string): string | undefined {
+export function detectColorFromTitle(title: string): string | undefined {
   const t = normalizeText(title);
 
-  if (t.includes("pamuk") || t.includes("cotton"))
-    return "Pamuk ağırlıklı, yumuşak ve nefes alabilen bir kumaş gibi duruyor.";
+  const colors: Record<string, string> = {
+    siyah: "siyah",
+    black: "siyah",
+    beyaz: "beyaz",
+    white: "beyaz",
+    kirmizi: "kırmızı",
+    red: "kırmızı",
+    mavi: "mavi",
+    blue: "mavi",
+    yesil: "yeşil",
+    green: "yeşil",
+    gri: "gri",
+    gray: "gri",
+  };
 
-  if (t.includes("polyester"))
-    return "Polyester ağırlıklı, dayanıklı ve kolay kırışmayan bir yapıda görünüyor.";
-
-  if (t.includes("deri") || t.includes("leather"))
-    return "Deri yapıda, uzun ömürlü ve şık bir ürün gibi duruyor.";
-
-  if (
-    t.includes("celik") ||
-    t.includes("steel") ||
-    t.includes("aluminyum") ||
-    t.includes("aluminium")
-  )
-    return "Metal/çelik malzemeden, sağlam ve dayanıklı bir ürün gibi görünüyor.";
-
-  return undefined;
-}
-
-/* -------------------------------------------------------------
-   Basit marka tahmini
-------------------------------------------------------------- */
-export function detectBrandGuess(title: string): string | undefined {
-  const firstWord = title.split(" ")[0];
-  if (!firstWord) return undefined;
-
-  if (firstWord[0] === firstWord[0].toUpperCase() && firstWord.length > 2) {
-    return firstWord;
+  for (const key in colors) {
+    if (t.includes(key)) return colors[key];
   }
 
   return undefined;
 }
 
 /* -------------------------------------------------------------
-   TÜM PLATFORM ÜRÜNLERİNİ FIRESTORE'DAN ÇEK
+   MATERYAL TESPİT
+------------------------------------------------------------- */
+export function detectMaterialGuess(title: string): string | undefined {
+  const t = normalizeText(title);
+
+  if (t.includes("pamuk") || t.includes("cotton"))
+    return "Pamuk ağırlıklı, yumuşak ve nefes alabilen bir yapıda.";
+
+  if (t.includes("deri") || t.includes("leather"))
+    return "Deri malzemeden, dayanıklı ve şık bir ürün.";
+
+  if (t.includes("polyester"))
+    return "Polyester ağırlıklı, dayanıklı ve hafif.";
+
+  return undefined;
+}
+
+/* -------------------------------------------------------------
+   MARKA TAHMİNİ
+------------------------------------------------------------- */
+export function detectBrandGuess(title: string): string | undefined {
+  const first = title.split(" ")[0];
+  if (first && first[0] === first[0].toUpperCase() && first.length > 2) {
+    return first;
+  }
+  return undefined;
+}
+
+/* -------------------------------------------------------------
+   🔥 TÜM ÜRÜNLERİ DİNAMİK OKU
 ------------------------------------------------------------- */
 export async function getProductsForShop(shopId: string): Promise<Product[]> {
   const products: Product[] = [];
 
-  // 🔥 Platformları DİNAMİK çek
   const platformsSnap = await db
     .collection("magazalar")
     .doc(shopId)
@@ -237,11 +155,71 @@ export async function getProductsForShop(shopId: string): Promise<Product[]> {
     productsSnap.forEach((docSnap) => {
       const data = docSnap.data() || {};
 
-      // 🔥 GÖRSELİ NETLEŞTİR
+      /* -------------------------------------------------
+         🖼️ GÖRSEL SEÇİMİ (NET + TEMİZ)
+      ------------------------------------------------- */
       let imageUrl = "";
+
       if (Array.isArray(data.images) && data.images.length) {
-        imageUrl = data.images[0];
-      } else {
+        const validImages = data.images.filter((url: string) => {
+          if (!url) return false;
+          const u = url.toLowerCase();
+
+          // ❌ UI / banner / reklam
+          if (
+            u.includes("logo") ||
+            u.includes("sprite") ||
+            u.includes("icon") ||
+            u.includes("nav") ||
+            u.includes("menu") ||
+            u.includes("megamenu") ||
+            u.includes("header") ||
+            u.includes("footer") ||
+            u.includes("banner") ||
+            u.includes("marketing") ||
+            u.includes("campaign") ||
+            u.includes("launch") ||
+            u.includes("fashion") ||
+            u.includes("store") ||
+            u.includes("ads") ||
+            u.includes("tracking") ||
+            u.endsWith(".svg")
+          ) return false;
+
+          // Trendyol
+          if (
+            u.includes("cdn.dsmcdn.com") &&
+            (u.includes("mnresize") || u.includes("/prod/"))
+          ) return true;
+
+          // Amazon
+          if (u.includes("m.media-amazon.com")) {
+            return (
+              u.includes("/images/i/") ||
+              u.includes("_sl") ||
+              u.includes("_ac_") ||
+              u.includes("_sx")
+            );
+          }
+
+          // Diğer platformlar
+          if (u.includes("hbimg.com")) return true;
+          if (u.includes("n11scdn.com")) return true;
+          if (u.includes("ciceksepeti")) return true;
+          if (u.includes("cdn.shopify.com")) return true;
+          if (u.includes("ikas")) return true;
+          if (u.includes("shopier")) return true;
+
+          return false;
+        });
+
+        if (validImages.length) {
+          imageUrl = validImages[0];
+        }
+      }
+
+      // Fallback
+      if (!imageUrl) {
         imageUrl =
           data.imageUrl ||
           data.image ||
@@ -249,17 +227,24 @@ export async function getProductsForShop(shopId: string): Promise<Product[]> {
           "";
       }
 
+      // 🧠 Amazon küçük görseli büyüt
+      if (imageUrl.includes("m.media-amazon.com")) {
+        imageUrl = imageUrl
+          .replace(/_AC_[^.]*/i, "_AC_SL1500_")
+          .replace(/_SR\d+,\d+/i, "_SL1500_");
+      }
+
       products.push({
         id: docSnap.id,
-        title: data.baslik || data.title || "",
-        price: data.fiyat || data.price || "",
-        url: data.URL || data.url || "",
+        title: data.title || data.baslik || "",
+        price: data.price || data.fiyat || "",
+        url: data.url || data.URL || "",
         imageUrl,
         platform,
-        category: detectCategoryFromTitle(data.baslik || data.title || ""),
-        color: detectColorFromTitle(data.baslik || data.title || ""),
-        materialGuess: detectMaterialGuess(data.baslik || data.title || ""),
-        brandGuess: detectBrandGuess(data.baslik || data.title || ""),
+        category: detectCategoryFromTitle(data.title || data.baslik || ""),
+        color: detectColorFromTitle(data.title || data.baslik || ""),
+        materialGuess: detectMaterialGuess(data.title || data.baslik || ""),
+        brandGuess: detectBrandGuess(data.title || data.baslik || ""),
         rawData: data,
       });
     });
