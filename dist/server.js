@@ -1,4 +1,5 @@
-import 'dotenv/config';
+import dotenv from "dotenv";
+import "dotenv/config";
 import express from "express";
 import cors from "cors";
 import { fileURLToPath } from "url";
@@ -10,23 +11,34 @@ import chatPage from "./routes/chatPage.js";
 import productImportRoutes from "./routes/productImport.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
+dotenv.config();
 const app = express();
-// MIDDLEWARES
+/* ---------------- MIDDLEWARES ---------------- */
 app.use(cors());
 app.use(express.json());
-// STATIC FILES (ÖNEMLİ!!!)
+/* ---------------- STATIC FILES ---------------- */
+// public klasörü (chat page, embed js, qr vs.)
 app.use(express.static(path.join(process.cwd(), "public")));
-// ROUTES
+/* ---------------- ROUTES ---------------- */
+// 🔥 AI CHAT API (ASIL OLAN)
 app.use("/api/assistant", assistantRouter);
+// 👉 POST /api/assistant/:shopId
+// body: { message }
+// 🛍️ Shop yönetimi
 app.use("/api/shop", shopRoutes);
-app.use("/chat", chatPage);
+// 📦 Ürün import (chrome extension)
 app.use("/api/product", productImportRoutes);
-// STATIC QR SERVING
-app.use("/qr", express.static(path.join(process.cwd(), "public", "qr")));
-// DEFAULT TEST ROUTE
+// 💬 SADECE HTML CHAT SAYFASI
+// 👉 GET /chat
+app.use("/chat", chatPage);
+/* ---------------- QR STATIC ---------------- */
+app.use("/qr", express.static(path.join(process.cwd(), "public/qr")));
+/* ---------------- HEALTH CHECK ---------------- */
 app.get("/", (req, res) => {
-    res.send("Backend aktif ✔ QR aktif ✔ Assistant aktif 🤖");
+    res.send("Backend aktif ✔ Assistant aktif 🤖 Ürün sistemi hazır 🛍️");
 });
-// SERVER LISTEN
+/* ---------------- SERVER ---------------- */
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, () => console.log(`Backend running on PORT: ${PORT}`));
+app.listen(PORT, () => {
+    console.log(`Backend running on PORT: ${PORT}`);
+});
