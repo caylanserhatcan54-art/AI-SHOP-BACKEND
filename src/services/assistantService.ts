@@ -122,13 +122,25 @@ export async function getAssistantReplyWithProducts(
 /* ----------------------------------------------------
    FRONTEND’E JSON FORMATINDA CEVAP DÖNEN YENİ FUNK.
 ---------------------------------------------------- */
-export async function processChatMessage(shopId: string, message: string) {
+export async function processChatMessage(
+  shopId: string,
+  message: string
+) {
+  // ⛔ CHAT SAYFASI ASLA SHOP DEĞİLDİR
+  if (!shopId || shopId === "chat") {
+    console.warn("⛔ Geçersiz shopId engellendi:", shopId);
+    return {
+      reply: "Mağaza bilgisi bulunamadı.",
+      products: [],
+    };
+  }
+
   const scope = detectQuestionScope(message);
 
-  // 🛒 Ürünleri çek
+  // 🛒 Ürünleri çek (TEK KAYNAK)
   const products = await getProductsForShop(shopId);
 
-  // 🗣️ Small talk / genel sohbet
+  // 🗣️ Small talk / genel sohbet → ASLA ürün dönme
   if (scope === "SMALL_TALK" || scope === "GENERAL_INFO") {
     const reply = await generateSmartReply(shopId, message);
     return {
@@ -145,15 +157,12 @@ export async function processChatMessage(shopId: string, message: string) {
     };
   }
 
-  // =================================================
-  // 🔥 ÜRÜN VAR → AI REPLY’Yİ TAMAMEN DEVRE DIŞI
-  // =================================================
-
+  // ✅ Ürün varsa eşleştir
   const matched = findMatchingProductsForFrontend(message, products);
   const formatted = formatProductsForFrontend(matched);
 
   return {
-    reply: "Bunlar ilgini çekebilir 😊",
+    reply: await generateSmartReply(shopId, message),
     products: formatted,
   };
 }
