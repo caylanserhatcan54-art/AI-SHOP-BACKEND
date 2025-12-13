@@ -211,15 +211,16 @@ export function detectBrandGuess(title: string): string | undefined {
    TÜM PLATFORM ÜRÜNLERİNİ FIRESTORE'DAN ÇEK
 ------------------------------------------------------------- */
 export async function getProductsForShop(shopId: string): Promise<Product[]> {
-  const platforms = [
+ const platforms = [
   "trendyol",
   "hepsiburada",
   "n11",
   "amazon",
   "ciceksepeti",
-  "ikas",
   "shopier",
-  "shopify"
+  "ikas",
+  "shopify",
+  "unknown" // güvenlik için
 ];
 
   const products: Product[] = [];
