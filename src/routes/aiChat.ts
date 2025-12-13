@@ -1,27 +1,30 @@
-// aiChat.ts (SADECE ROUTE)
-import express from "express";
-import { processChatMessage } from "../services/assistantService";
+// src/routes/aiChat.ts
 
-const router = express.Router();
+import { Router } from "express";
+import { generateSmartReply } from "../services/assistantService.js";
 
-router.post("/chat", async (req, res) => {
+const router = Router();
+
+router.post("/", async (req, res) => {
   try {
     const { shopId, message } = req.body;
 
     if (!shopId || !message) {
-      return res.status(400).json({ error: "shopId ve message zorunlu" });
+      return res.status(400).json({
+        error: "shopId and message required"
+      });
     }
 
-    const result = await processChatMessage(shopId, message);
+    const reply = await generateSmartReply(shopId, message);
 
-    res.json({
-      ok: true,
-      reply: result.reply,
-      products: result.products
+    return res.json({
+      reply
     });
-  } catch (e) {
-    console.error("AI CHAT ERROR", e);
-    res.status(500).json({ error: "AI hata verdi" });
+  } catch (err) {
+    console.error("❌ AI Chat Error:", err);
+    return res.status(500).json({
+      error: "AI response failed"
+    });
   }
 });
 
