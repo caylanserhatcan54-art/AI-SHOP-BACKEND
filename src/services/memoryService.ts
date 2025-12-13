@@ -1,5 +1,5 @@
 // src/services/memoryService.ts
-import admin, { db } from "../config/firebaseAdmin.js";
+import { db } from "../config/firebaseAdmin.js";
 
 /**
  * Kullanıcı hafızasını güncelle (kategoriler, renkler, mesajlar vs.)

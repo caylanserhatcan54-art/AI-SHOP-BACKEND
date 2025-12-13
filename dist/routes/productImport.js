@@ -1,43 +1,41 @@
-// src/routes/productImport.ts
-import { Router } from "express";
+import express from "express";
 import { db } from "../config/firebaseAdmin.js";
-const router = Router();
-/**
- * Ürün import — Chrome extension buraya POST atıyor
- * Endpoint: POST /api/import/:shopId
- */
-router.post("/:shopId", async (req, res) => {
-    const { shopId } = req.params;
-    const { platform, product } = req.body;
-    if (!platform || !product) {
-        return res.status(400).json({
-            ok: false,
-            msg: "platform ve product gönderilmesi zorunludur!",
-        });
-    }
+const router = express.Router();
+router.post("/import", async (req, res) => {
     try {
-        // Eğer ürün id yoksa Firestore random doc id üretelim:
-        const productId = product.id || db.collection("_").doc().id;
-        const ref = db
+        const { shopId, product } = req.body;
+        if (!shopId || !product) {
+            return res.status(400).json({ error: "shopId or product missing" });
+        }
+        const platform = product.platform || "unknown";
+        // 🔥 HER ZAMAN ÇALIŞAN ID
+        const safeProductId = String(product.productId || "")
+            .replace(/[^a-zA-Z0-9_-]/g, "")
+            .slice(0, 100) ||
+            `auto_${Date.now()}`;
+        console.log("📦 IMPORT", {
+            shopId,
+            platform,
+            safeProductId,
+            title: product.title
+        });
+        await db
             .collection("magazalar")
             .doc(shopId)
             .collection("platformlar")
             .doc(platform)
             .collection("urunler")
-            .doc(productId);
-        await ref.set(product, { merge: true });
-        return res.json({
-            ok: true,
-            msg: "Ürün başarıyla kaydedildi ✔",
-            productId,
-        });
+            .doc(safeProductId)
+            .set({
+            ...product,
+            productId: safeProductId,
+            importedAt: Date.now()
+        }, { merge: true });
+        return res.json({ ok: true });
     }
-    catch (error) {
-        console.error("IMPORT ERROR:", error);
-        return res.status(500).json({
-            ok: false,
-            msg: "Ürün kaydı sırasında hata oluştu ❌",
-        });
+    catch (e) {
+        console.error("❌ IMPORT ERROR", e);
+        return res.status(500).json({ error: e.message });
     }
 });
 export default router;

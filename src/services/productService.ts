@@ -1,6 +1,7 @@
 // src/routes/productImport.ts
 import { Router } from "express";
-import admin, { db } from "../config/firebaseAdmin.js";
+import { db } from "../config/firebaseAdmin.js";
+
 
 export interface Product {
   id: string;
