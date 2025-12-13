@@ -10,7 +10,7 @@ import assistantRouter from "./routes/assistant.js";
 import shopRoutes from "./routes/shoproutes.js";
 import chatPage from "./routes/chatPage.js";
 import productImportRoutes from "./routes/productImport.js";
-import aiChatRoute from "./routes/aiChat";
+import aiChatRouter from "./routes/aiChat.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
