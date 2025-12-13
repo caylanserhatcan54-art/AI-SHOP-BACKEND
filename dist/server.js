@@ -4,10 +4,10 @@ import cors from "cors";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
 import path from "path";
+import assistantRouter from "./routes/assistant.js";
 import shopRoutes from "./routes/shoproutes.js";
 import chatPage from "./routes/chatPage.js";
 import productImportRoutes from "./routes/productImport.js";
-import aiChatRouter from "./routes/aiChat.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const app = express();
@@ -17,7 +17,7 @@ app.use(express.json());
 // STATIC FILES (ÖNEMLİ!!!)
 app.use(express.static(path.join(process.cwd(), "public")));
 // ROUTES
-app.use("/api/assistant", aiChatRouter);
+app.use("/api/assistant", assistantRouter);
 app.use("/api/shop", shopRoutes);
 app.use("/chat", chatPage);
 app.use("/api/product", productImportRoutes);
