@@ -157,7 +157,16 @@ export function detectBrandGuess(title) {
    TÜM PLATFORM ÜRÜNLERİNİ FIRESTORE'DAN ÇEK
 ------------------------------------------------------------- */
 export async function getProductsForShop(shopId) {
-    const platforms = ["trendyol", "hepsiburada", "n11", "amazon", "ciceksepeti"];
+    const platforms = [
+        "trendyol",
+        "hepsiburada",
+        "n11",
+        "amazon",
+        "ciceksepeti",
+        "ikas",
+        "shopier",
+        "shopify"
+    ];
     const products = [];
     for (const platform of platforms) {
         const snap = await db

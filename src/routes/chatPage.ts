@@ -331,10 +331,12 @@ router.get("/:shopId", (req, res) => {
       const card = document.createElement("div");
       card.className = "product-card";
 
-      const img = document.createElement("img");
-      img.src = p.imageUrl || "";
-      img.alt = p.title || "";
-      img.onclick = () => openImage(p.imageUrl || "");
+      const imgSrc = Array.isArray(p.imageUrl)
+  ? p.imageUrl[0]
+  : p.imageUrl || p.image || "";
+
+img.src = imgSrc;
+img.onclick = () => openImage(imgSrc);
 
       const title = document.createElement("div");
       title.className = "product-title";
@@ -396,9 +398,14 @@ router.get("/:shopId", (req, res) => {
         addProductGroup(products);
       }
 
-      if (data.reply) {
-        addBubble(data.reply, "ai");
-      }
+      if (data.reply && data.reply.includes("Henüz bu mağazada ürün yok")) {
+  addBubble(data.reply, "ai");
+  return; // ⛔ ürün kartı basma
+}
+
+if (data.reply) {
+  addBubble(data.reply, "ai");
+}
     } catch (e) {
       console.error(e);
       addBubble("Şu anda bir bağlantı sorunu yaşıyorum, biraz sonra tekrar dener misin? ❌", "ai");

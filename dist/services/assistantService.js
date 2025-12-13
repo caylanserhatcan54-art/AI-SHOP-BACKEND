@@ -80,16 +80,26 @@ export async function getAssistantReplyWithProducts(shopId, userMessage) {
 ---------------------------------------------------- */
 export async function processChatMessage(shopId, message) {
     const scope = detectQuestionScope(message);
+    // 🔥 AI cevabı (ürün yoksa mesajı zaten burada söylüyor)
     const aiReply = await generateSmartReply(shopId, message);
-    // ❌ sohbet & genel bilgi → ürün YOK
+    // 🗣️ Sohbet & genel bilgi → ASLA ürün dönme
     if (scope === "SMALL_TALK" || scope === "GENERAL_INFO") {
         return {
             reply: aiReply,
             products: [],
         };
     }
-    // 🛒 sadece mağaza ürünü ise
+    // 🛒 Ürünleri al
     const products = await getProductsForShop(shopId);
+    // ❌ Ürün yoksa frontend’e BOŞ ürün gönder
+    // (UI artık tekrar "ürün yok" yazmayacak)
+    if (!products.length) {
+        return {
+            reply: aiReply,
+            products: [],
+        };
+    }
+    // ✅ Ürün varsa eşleştir
     const matched = findMatchingProductsForFrontend(message, products);
     const formatted = formatProductsForFrontend(matched);
     return {

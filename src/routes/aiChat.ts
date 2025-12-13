@@ -1,3 +1,4 @@
+// src/routes/aiChat.ts
 import { Router } from "express";
 import { processChatMessage } from "../services/assistantService.js";
 
@@ -13,9 +14,12 @@ router.post("/", async (req, res) => {
       });
     }
 
+    // 🔥 TEK DOĞRU ÇAĞRI
     const result = await processChatMessage(shopId, message);
 
+    // result = { reply, products }
     return res.json(result);
+
   } catch (err) {
     console.error("❌ AI Chat Error:", err);
     return res.status(500).json({
