@@ -126,7 +126,7 @@ export async function processChatMessage(
   shopId: string,
   message: string
 ) {
-  // ⛔ CHAT SAYFASI ASLA SHOP DEĞİLDİR
+  // ⛔ Chat sayfası asla shop değildir
   if (!shopId || shopId === "chat") {
     console.warn("⛔ Geçersiz shopId engellendi:", shopId);
     return {
@@ -137,10 +137,22 @@ export async function processChatMessage(
 
   const scope = detectQuestionScope(message);
 
-  // 🛒 Ürünleri çek (TEK KAYNAK)
+  // 🛒 Ürünleri çek (TEK ve GERÇEK KAYNAK)
   const products = await getProductsForShop(shopId);
+  const hasProducts = products && products.length > 0;
 
-  // 🗣️ Small talk / genel sohbet → ASLA ürün dönme
+  // ❌ GERÇEKTEN ÜRÜN YOKSA (TEK YER)
+  if (!hasProducts) {
+    return {
+      reply:
+        "😊 Henüz bu mağazada ürün görünmüyor 😊\n" +
+        "Önce mağazaya ürün eklenmesi gerekiyor.\n\n" +
+        "İstersen biraz daha bakınabilir, kafana takılan her şeyi sorabilirsin 😊",
+      products: [],
+    };
+  }
+
+  // 🗣️ Small talk → ürün basma
   if (scope === "SMALL_TALK" || scope === "GENERAL_INFO") {
     const reply = await generateSmartReply(shopId, message);
     return {
@@ -149,20 +161,12 @@ export async function processChatMessage(
     };
   }
 
-  // ❌ Ürün yoksa
-  if (!products.length) {
-    return {
-      reply: "Bu mağazada henüz ürün yok 😊",
-      products: [],
-    };
-  }
-
-  // ✅ Ürün varsa eşleştir
+  // ✅ ÜRÜN VAR + ÜRÜN SORUSU
   const matched = findMatchingProductsForFrontend(message, products);
   const formatted = formatProductsForFrontend(matched);
 
   return {
-    reply: await generateSmartReply(shopId, message),
+    reply: "Bunlar ilgini çekebilir 😊",
     products: formatted,
   };
 }
