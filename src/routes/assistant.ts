@@ -3,18 +3,15 @@ import { processChatMessage } from "../services/assistantService.js";
 
 const router = express.Router();
 
-/**
- * POST /chat/:shopId
- * örnek: /chat/caylan
- */
+// POST /api/assistant/:shopId
 router.post("/:shopId", async (req, res) => {
   try {
     const { shopId } = req.params;
     const { message, sessionId } = req.body;
 
-    if (!shopId || !message) {
-      return res.status(400).json({
-        reply: "Eksik bilgi gönderildi.",
+    if (!message) {
+      return res.json({
+        reply: "Bir şeyler yazabilirsin 😊",
         products: [],
       });
     }
@@ -25,10 +22,10 @@ router.post("/:shopId", async (req, res) => {
       message
     );
 
-    return res.json(result);
+    res.json(result);
   } catch (err) {
     console.error("❌ Assistant error:", err);
-    return res.status(500).json({
+    res.status(500).json({
       reply: "Bir hata oluştu.",
       products: [],
     });

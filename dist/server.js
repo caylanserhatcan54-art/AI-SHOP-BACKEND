@@ -17,20 +17,19 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 /* ---------------- STATIC FILES ---------------- */
-// public klasörü (chat page, embed js, qr vs.)
 app.use(express.static(path.join(process.cwd(), "public")));
-/* ---------------- ROUTES ---------------- */
-// 🔥 AI CHAT API (ASIL OLAN)
+/* ---------------- API ROUTES ---------------- */
+// 🤖 AI CHAT API (JSON)
 app.use("/api/assistant", assistantRouter);
-// 👉 POST /api/assistant/:shopId
-// body: { message }
+// POST /api/assistant/:shopId
 // 🛍️ Shop yönetimi
 app.use("/api/shop", shopRoutes);
-// 📦 Ürün import (chrome extension)
+// 📦 Ürün import (Chrome extension)
 app.use("/api/product", productImportRoutes);
-// 💬 SADECE HTML CHAT SAYFASI
-// 👉 GET /chat
+/* ---------------- UI ROUTES ---------------- */
+// 💬 HTML Chat Page
 app.use("/chat", chatPage);
+// GET /chat/:shopId
 /* ---------------- QR STATIC ---------------- */
 app.use("/qr", express.static(path.join(process.cwd(), "public/qr")));
 /* ---------------- HEALTH CHECK ---------------- */

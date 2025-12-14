@@ -13,215 +13,226 @@ router.get("/:shopId", (req, res) => {
 <title>AI Shop Assistant</title>
 
 <style>
-  * { box-sizing: border-box; }
-  body {
-    margin: 0;
-    height: 100vh;
-    background: #14151a;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
-    display: flex;
-    flex-direction: column;
-    color: #f5f5f5;
-  }
-  .header {
-    padding: 14px 18px;
-    text-align: center;
-    font-size: 16px;
-    font-weight: 600;
-    background: radial-gradient(circle at top left, #1f2933, #111218);
-    border-bottom: 1px solid #262832;
-  }
-  .chat {
-    flex: 1;
-    overflow-y: auto;
-    padding: 18px 16px 12px;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-  .bubble-ai, .bubble-user {
-    max-width: 85%;
-    padding: 12px 14px;
-    border-radius: 18px;
-    font-size: 14px;
-    line-height: 1.5;
-    white-space: pre-wrap;
-  }
-  .bubble-ai {
-    background: #22252f;
-    border-top-left-radius: 6px;
-  }
-  .bubble-user {
-    margin-left: auto;
-    background: linear-gradient(135deg, #4f46e5, #22d3ee);
-    border-top-right-radius: 6px;
-    color: #fff;
-  }
-  .input-box {
-    position: sticky;
-    bottom: 0;
-    padding: 12px;
-    background: #111218;
-    border-top: 1px solid #262832;
-    display: flex;
-    gap: 10px;
-  }
-  .input-box input {
-    flex: 1;
-    background: #1b1d25;
-    border: 1px solid #303341;
-    padding: 12px 14px;
-    border-radius: 999px;
-    color: #fff;
-    outline: none;
-  }
-  .input-box button {
-    width: 46px;
-    height: 46px;
-    background: linear-gradient(135deg, #14b8a6, #22d3ee);
-    border-radius: 999px;
-    border: none;
-    font-size: 18px;
-    cursor: pointer;
-  }
-  .product-wrapper {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-  }
-  .product-card {
-    width: 210px;
-    background: #1b1e27;
-    border-radius: 16px;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  .product-card img {
-    width: 100%;
-    border-radius: 12px;
-    object-fit: cover;
-    cursor: pointer;
-  }
-  .product-title { font-size: 13px; font-weight: 600; }
-  .product-price { font-size: 13px; color: #7dd3fc; }
-  .product-link {
-    padding: 8px;
-    background: linear-gradient(135deg, #4f46e5, #22c1c3);
-    border-radius: 999px;
-    text-align: center;
-    color: white;
-    text-decoration: none;
-    font-size: 13px;
-  }
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  height: 100vh;
+  background: #14151a;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  display: flex;
+  flex-direction: column;
+  color: #f5f5f5;
+}
+.header {
+  padding: 14px 18px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 600;
+  background: radial-gradient(circle at top left, #1f2933, #111218);
+  border-bottom: 1px solid #262832;
+}
+.chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.bubble-ai, .bubble-user {
+  max-width: 85%;
+  padding: 12px 14px;
+  border-radius: 18px;
+  font-size: 14px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.bubble-ai {
+  background: #22252f;
+  border-top-left-radius: 6px;
+}
+.bubble-user {
+  margin-left: auto;
+  background: linear-gradient(135deg, #4f46e5, #22d3ee);
+  border-top-right-radius: 6px;
+  color: #fff;
+}
+.input-box {
+  position: sticky;
+  bottom: 0;
+  padding: 12px;
+  background: #111218;
+  border-top: 1px solid #262832;
+  display: flex;
+  gap: 10px;
+}
+.input-box input {
+  flex: 1;
+  background: #1b1d25;
+  border: 1px solid #303341;
+  padding: 12px 14px;
+  border-radius: 999px;
+  color: #fff;
+  outline: none;
+}
+.input-box button {
+  width: 46px;
+  height: 46px;
+  background: linear-gradient(135deg, #14b8a6, #22d3ee);
+  border-radius: 999px;
+  border: none;
+  font-size: 18px;
+  cursor: pointer;
+}
+.product-wrapper {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.product-card {
+  width: 210px;
+  background: #1b1e27;
+  border-radius: 16px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.product-card img {
+  width: 100%;
+  border-radius: 12px;
+  object-fit: cover;
+}
+.product-title { font-size: 13px; font-weight: 600; }
+.product-price { font-size: 13px; color: #7dd3fc; }
+.product-link {
+  padding: 8px;
+  background: linear-gradient(135deg, #4f46e5, #22c1c3);
+  border-radius: 999px;
+  text-align: center;
+  color: white;
+  text-decoration: none;
+  font-size: 13px;
+}
 </style>
 </head>
 
 <body>
-  <div class="header" id="shopName">Alışveriş’te Yapay Zekanız</div>
+<div class="header" id="shopName">Alışveriş’te Yapay Zekanız</div>
+<div class="chat" id="chat"></div>
 
-  <div class="chat" id="chat"></div>
-
-  <div class="input-box">
-    <input id="msgInput" placeholder="Sorunuzu yazın…" />
-    <button id="sendBtn">➤</button>
-  </div>
+<div class="input-box">
+  <input id="msgInput" placeholder="Sorunuzu yazın…" />
+  <button id="sendBtn">➤</button>
+</div>
 
 <script>
-  const shopId = "${shopId}";
-  const chat = document.getElementById("chat");
-  const input = document.getElementById("msgInput");
-  const sendBtn = document.getElementById("sendBtn");
+const shopId = "${shopId}";
+const chat = document.getElementById("chat");
+const input = document.getElementById("msgInput");
+const sendBtn = document.getElementById("sendBtn");
 
-  function addBubble(text, sender) {
-    const div = document.createElement("div");
-    div.className = sender === "user" ? "bubble-user" : "bubble-ai";
-    div.innerText = text;
-    chat.appendChild(div);
-    chat.scrollTop = chat.scrollHeight;
-  }
+let sessionId = localStorage.getItem("sessionId");
+if (!sessionId) {
+  sessionId = crypto.randomUUID();
+  localStorage.setItem("sessionId", sessionId);
+}
 
-  function addProducts(products) {
-    const wrap = document.createElement("div");
-    wrap.className = "bubble-ai";
-    const grid = document.createElement("div");
-    grid.className = "product-wrapper";
+function addBubble(text, sender) {
+  const div = document.createElement("div");
+  div.className = sender === "user" ? "bubble-user" : "bubble-ai";
+  div.innerText = text;
+  chat.appendChild(div);
+  chat.scrollTop = chat.scrollHeight;
+}
 
-    products.forEach(p => {
-      const card = document.createElement("div");
-      card.className = "product-card";
+function addProducts(products) {
+  const wrap = document.createElement("div");
+  wrap.className = "bubble-ai";
 
-      if (p.image) {
-        const img = document.createElement("img");
-        img.src = p.image;
-        card.appendChild(img);
-      }
+  const grid = document.createElement("div");
+  grid.className = "product-wrapper";
 
-      const t = document.createElement("div");
-      t.className = "product-title";
-      t.innerText = p.title;
-      card.appendChild(t);
+  products.forEach(p => {
+    const card = document.createElement("div");
+    card.className = "product-card";
 
-      if (p.price) {
-        const pr = document.createElement("div");
-        pr.className = "product-price";
-        pr.innerText = p.price;
-        card.appendChild(pr);
-      }
-
-      if (p.url) {
-        const a = document.createElement("a");
-        a.className = "product-link";
-        a.href = p.url;
-        a.target = "_blank";
-        a.innerText = "Ürünü Gör →";
-        card.appendChild(a);
-      }
-
-      grid.appendChild(card);
-    });
-
-    wrap.appendChild(grid);
-    chat.appendChild(wrap);
-    chat.scrollTop = chat.scrollHeight;
-  }
-
-  async function sendMessage() {
-    const text = input.value.trim();
-    if (!text) return;
-
-    addBubble(text, "user");
-    input.value = "";
-
-    try {
-      const res = await fetch(\`/api/assistant/chat/\${shopId}\`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: text })
-      });
-
-      const data = await res.json();
-      if (data.reply) addBubble(data.reply, "ai");
-      if (Array.isArray(data.products)) addProducts(data.products);
-    } catch (e) {
-      addBubble("Bağlantı hatası oluştu.", "ai");
+    if (p.imageUrl) {
+      const img = document.createElement("img");
+      img.src = p.imageUrl;
+      card.appendChild(img);
     }
-  }
 
-  sendBtn.onclick = sendMessage;
-  input.onkeydown = e => { if (e.key === "Enter") sendMessage(); };
+    const t = document.createElement("div");
+    t.className = "product-title";
+    t.innerText = p.title;
+    card.appendChild(t);
 
-  fetch(\`/api/shop/public/\${shopId}\`)
-    .then(r => r.json())
-    .then(d => {
-      if (d?.shop?.shopName) {
-        document.getElementById("shopName").innerText =
-          d.shop.shopName + " – Alışveriş’te Yapay Zekanız";
-      }
+    if (p.price) {
+      const pr = document.createElement("div");
+      pr.className = "product-price";
+      pr.innerText = p.price;
+      card.appendChild(pr);
+    }
+
+    if (p.url) {
+      const a = document.createElement("a");
+      a.className = "product-link";
+      a.href = p.url;
+      a.target = "_blank";
+      a.innerText = "Ürünü Gör →";
+      card.appendChild(a);
+    }
+
+    grid.appendChild(card);
+  });
+
+  wrap.appendChild(grid);
+  chat.appendChild(wrap);
+  chat.scrollTop = chat.scrollHeight;
+}
+
+async function sendMessage() {
+  const text = input.value.trim();
+  if (!text) return;
+
+  addBubble(text, "user");
+  input.value = "";
+
+  try {
+    const res = await fetch(\`/api/assistant/\${shopId}\`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: text,
+        sessionId
+      })
     });
 
-  addBubble("Merhaba 👋 Nasıl yardımcı olabilirim?", "ai");
+    const data = await res.json();
+
+    if (data.reply) addBubble(data.reply, "ai");
+    if (Array.isArray(data.products) && data.products.length) {
+      addProducts(data.products);
+    }
+  } catch (e) {
+    addBubble("Bağlantı hatası oluştu.", "ai");
+  }
+}
+
+sendBtn.onclick = sendMessage;
+input.onkeydown = e => { if (e.key === "Enter") sendMessage(); };
+
+fetch(\`/api/shop/public/\${shopId}\`)
+  .then(r => r.json())
+  .then(d => {
+    if (d?.shop?.shopName) {
+      document.getElementById("shopName").innerText =
+        d.shop.shopName + " – Alışveriş’te Yapay Zekanız";
+    }
+  });
+
+addBubble("Merhaba 👋 Nasıl yardımcı olabilirim?", "ai");
 </script>
 </body>
 </html>`;
