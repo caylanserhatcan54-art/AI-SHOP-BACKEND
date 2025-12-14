@@ -1,30 +1,39 @@
 export interface UniversalProduct {
-  productId: string;
-  platform: "trendyol" | "amazon" | "hepsiburada" | "n11" | "ciceksepeti";
+  id: string;                 // platform ürün id (asin, trendyol id vs)
+  platform: string;           // "Amazon" | "Trendyol" | ...
 
   title: string;
+  description: string;
 
-  price?: {
-    value: number;
-    currency: string;
+  url?: string;
+
+  category: string;           // tshirt, mont, bardak, kedi-mamasi...
+  categoryPath: string[];     // ["moda","erkek","ust-giyim","tshirt"]
+
+  attributes: {
+    brand?: string;
+    gender?: "erkek" | "kadin" | "unisex" | "cocuk";
+    material?: string;
+    color?: string;
+    size?: string;
+    sizeOptions?: string[];
+    capacity?: string;
+    ageGroup?: string;
+    fit?: string;
+    neck?: string;
+    [key: string]: any;
   };
+
+  price?: number;
+  priceText?: string;
+  currency?: string;
 
   images: string[];
 
-  variants?: {
-    sizes?: string[];
-    colors?: string[];
-  };
+  rating?: number;
+  reviewCount?: number;
 
-  attributes?: Record<string, string>;
-  description?: string;
-  usageGuide?: string[];
-
-  reviewSummary?: {
-    rating?: number;
-    pros?: string[];
-    cons?: string[];
-  };
+  keywords: string[];
 
   importedAt: number;
 }

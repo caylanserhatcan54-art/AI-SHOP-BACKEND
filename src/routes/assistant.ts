@@ -1,65 +1,32 @@
-// src/routes/assistant.ts
-import { Router } from "express";
+import express from "express";
 import { processChatMessage } from "../services/assistantService.js";
 
-const router = Router();
+const router = express.Router();
 
-/* --------------------------------------------------
-   AI SHOP ASSISTANT CHAT ENDPOINT
-   POST /api/assistant/chat
-   (shopId BODY'den gelir)
--------------------------------------------------- */
+/**
+ * POST /assistant/chat
+ * Body: { shopId: string, message: string, sessionId?: string }
+ */
 router.post("/chat", async (req, res) => {
   try {
-    const { shopId, message } = req.body;
+    const { shopId, message, sessionId } = req.body ?? {};
 
     if (!shopId || !message) {
-      return res.status(400).json({ reply: "Eksik bilgi", products: [] });
+      return res.status(400).json({
+        reply: "Eksik bilgi gönderildi.",
+        products: [],
+      });
     }
 
-    const result = await processChatMessage(shopId, message);
+    const sid = sessionId || req.ip || "anonymous";
+
+    const result = await processChatMessage(shopId, sid, String(message));
+
     return res.json(result);
-  } catch (e) {
-    console.error(e);
-    return res.status(500).json({ reply: "Sunucu hatası", products: [] });
-  }
-});
-
-/* --------------------------------------------------
-   AI SHOP ASSISTANT CHAT ENDPOINT
-   POST /api/assistant/:shopId
-   (shopId URL'den gelir)
--------------------------------------------------- */
-router.post("/:shopId", async (req, res) => {
-  try {
-    const { shopId } = req.params;
-    const { message } = req.body;
-
-    // 🔒 ZORUNLU KONTROLLER
-    if (!shopId || typeof shopId !== "string") {
-      return res.status(400).json({
-        reply: "shopId bulunamadı ❌",
-        products: [],
-      });
-    }
-
-    if (!message || typeof message !== "string") {
-      return res.status(400).json({
-        reply: "Mesaj boş olamaz 😊",
-        products: [],
-      });
-    }
-
-    const result = await processChatMessage(shopId, message);
-
-    return res.json({
-      reply: result.reply,
-      products: result.products,
-    });
   } catch (err) {
-    console.error("❌ ASSISTANT /:shopId ERROR:", err);
+    console.error("❌ Assistant error:", err);
     return res.status(500).json({
-      reply: "Şu anda geçici bir sorun var, biraz sonra tekrar dener misin? 🙏",
+      reply: "Bir hata oluştu.",
       products: [],
     });
   }
