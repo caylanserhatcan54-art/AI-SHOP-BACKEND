@@ -4,12 +4,13 @@ import { processChatMessage } from "../services/assistantService.js";
 const router = express.Router();
 
 /**
- * POST /assistant/chat
- * Body: { shopId: string, message: string, sessionId?: string }
+ * POST /chat/:shopId
+ * örnek: /chat/caylan
  */
-router.post("/chat", async (req, res) => {
+router.post("/:shopId", async (req, res) => {
   try {
-    const { shopId, message, sessionId } = req.body ?? {};
+    const { shopId } = req.params;
+    const { message, sessionId } = req.body;
 
     if (!shopId || !message) {
       return res.status(400).json({
@@ -18,9 +19,11 @@ router.post("/chat", async (req, res) => {
       });
     }
 
-    const sid = sessionId || req.ip || "anonymous";
-
-    const result = await processChatMessage(shopId, sid, String(message));
+    const result = await processChatMessage(
+      shopId,
+      sessionId || req.ip,
+      message
+    );
 
     return res.json(result);
   } catch (err) {
