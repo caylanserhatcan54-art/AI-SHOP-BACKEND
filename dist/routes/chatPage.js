@@ -139,7 +139,7 @@ body {
   font-size: 13px;
 }
 
-/* 🔥 QUICK ACTIONS – TAM ORTA */
+/* QUICK ACTIONS – ORTA */
 .quick-actions {
   position: fixed;
   top: 50%;
@@ -176,13 +176,10 @@ body {
 <body>
 
 <div class="header" id="shopName">Alışveriş’te Yapay Zekanız</div>
-
 <div class="chat" id="chat"></div>
 
-<!-- 🔥 ORTA BUTONLAR -->
 <div class="quick-actions" id="quickActions">
   <button onclick="quickSend('Bana ürün öner')">⭐ Bana ürün öner</button>
-  <button onclick="quickSend('Kombin önerisi iste')">👗 Kombin öner</button>
   <button onclick="quickSend('Spor ayakkabı öner')">👟 Spor ayakkabı</button>
   <button onclick="quickSend('Kışlık mont öner')">🧥 Kışlık mont</button>
   <button onclick="quickSend('Bütçeme göre ürün öner')">💸 Bütçeme göre</button>
@@ -244,7 +241,7 @@ function addProducts(products) {
 
     const t = document.createElement("div");
     t.className = "product-title";
-    t.innerText = p.title;
+    t.innerText = p.title || "";
     card.appendChild(t);
 
     if (p.price) {
@@ -280,33 +277,28 @@ async function sendMessage() {
   input.value = "";
 
   try {
+    // ✅ DOĞRUSU: shopId URL param ile
     const res = await fetch(\`/api/assistant/\${shopId}\`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text, sessionId })
+      body: JSON.stringify({
+        message: text,
+        sessionId: sessionId
+      })
     });
 
     const data = await res.json();
+
     if (data.reply) addBubble(data.reply, "ai");
-    if (Array.isArray(data.products) && data.products.length) {
-      addProducts(data.products);
-    }
-  } catch {
+    if (Array.isArray(data.products) && data.products.length) addProducts(data.products);
+
+  } catch (e) {
     addBubble("Bağlantı hatası oluştu.", "ai");
   }
 }
 
 sendBtn.onclick = sendMessage;
 input.onkeydown = e => { if (e.key === "Enter") sendMessage(); };
-
-fetch(\`/api/shop/public/\${shopId}\`)
-  .then(r => r.json())
-  .then(d => {
-    if (d?.shop?.shopName) {
-      document.getElementById("shopName").innerText =
-        d.shop.shopName + " – Alışveriş’te Yapay Zekanız";
-    }
-  });
 
 addBubble("Merhaba 👋 Nasıl yardımcı olabilirim?", "ai");
 </script>
