@@ -120,6 +120,15 @@ body {
 <body>
 <div class="header" id="shopName">Alışveriş’te Yapay Zekanız</div>
 <div class="chat" id="chat"></div>
+<div class="quick-actions" id="quickActions">
+
+  <button onclick="quickSend('Bana ürün öner')">⭐ Bana ürün öner</button>
+  <button onclick="quickSend('Kombin önerisi iste')">👗 Kombin öner</button>
+  <button onclick="quickSend('Spor ayakkabı öner')">👟 Spor ayakkabı</button>
+  <button onclick="quickSend('Kışlık mont öner')">🧥 Kışlık mont</button>
+  <button onclick="quickSend('Bütçeme göre ürün öner')">💸 Bütçeme göre</button>
+  <button onclick="quickSend('Hediye öner')">🎁 Hediye öner</button>
+</div>
 
 <div class="input-box">
   <input id="msgInput" placeholder="Sorunuzu yazın…" />
