@@ -1,24 +1,40 @@
 import express from "express";
 import { processChatMessage } from "../services/assistantService.js";
 const router = express.Router();
-// POST /api/assistant/:shopId
-router.post("/:shopId", async (req, res) => {
+/**
+ * POST /api/assistant/chat
+ * BODY:
+ * {
+ *   shopId: "caylan",
+ *   sessionId?: "abc123",
+ *   message: "erkek gözlük"
+ * }
+ */
+router.post("/chat", async (req, res) => {
     try {
-        const { shopId } = req.params;
-        const { message, sessionId } = req.body;
-        if (!message) {
+        const { shopId, sessionId, message } = req.body;
+        // 🔴 shopId zorunlu
+        if (!shopId) {
+            return res.status(400).json({
+                reply: "Mağaza bilgisi eksik.",
+                products: [],
+            });
+        }
+        // 🔴 mesaj yoksa
+        if (!message || !String(message).trim()) {
             return res.json({
                 reply: "Bir şeyler yazabilirsin 😊",
                 products: [],
             });
         }
-        const result = await processChatMessage(shopId, sessionId || req.ip, message);
-        res.json(result);
+        const result = await processChatMessage(shopId, sessionId || req.ip, // session fallback
+        String(message));
+        return res.json(result);
     }
     catch (err) {
         console.error("❌ Assistant error:", err);
-        res.status(500).json({
-            reply: "Bir hata oluştu.",
+        return res.status(500).json({
+            reply: "Bir hata oluştu. Lütfen tekrar dene.",
             products: [],
         });
     }
