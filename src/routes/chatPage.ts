@@ -14,6 +14,7 @@ router.get("/:shopId", (req, res) => {
 
 <style>
 * { box-sizing: border-box; }
+
 body {
   margin: 0;
   height: 100vh;
@@ -23,6 +24,8 @@ body {
   flex-direction: column;
   color: #f5f5f5;
 }
+
+/* HEADER */
 .header {
   padding: 14px 18px;
   text-align: center;
@@ -31,14 +34,17 @@ body {
   background: radial-gradient(circle at top left, #1f2933, #111218);
   border-bottom: 1px solid #262832;
 }
+
+/* CHAT */
 .chat {
   flex: 1;
   overflow-y: auto;
-  padding: 18px 16px 12px;
+  padding: 18px 16px 120px;
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
+
 .bubble-ai, .bubble-user {
   max-width: 85%;
   padding: 12px 14px;
@@ -47,25 +53,32 @@ body {
   line-height: 1.5;
   white-space: pre-wrap;
 }
+
 .bubble-ai {
   background: #22252f;
   border-top-left-radius: 6px;
 }
+
 .bubble-user {
   margin-left: auto;
-  background: linear-gradient(135deg, #4f46e5, #22d3ee);
+  background: linear-gradient(135deg, #14b8a6, #22d3ee);
   border-top-right-radius: 6px;
-  color: #fff;
+  color: #001018;
 }
+
+/* INPUT */
 .input-box {
-  position: sticky;
+  position: fixed;
   bottom: 0;
+  left: 0;
+  right: 0;
   padding: 12px;
   background: #111218;
   border-top: 1px solid #262832;
   display: flex;
   gap: 10px;
 }
+
 .input-box input {
   flex: 1;
   background: #1b1d25;
@@ -75,6 +88,7 @@ body {
   color: #fff;
   outline: none;
 }
+
 .input-box button {
   width: 46px;
   height: 46px;
@@ -84,11 +98,14 @@ body {
   font-size: 18px;
   cursor: pointer;
 }
+
+/* PRODUCTS */
 .product-wrapper {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
 }
+
 .product-card {
   width: 210px;
   background: #1b1e27;
@@ -98,30 +115,75 @@ body {
   flex-direction: column;
   gap: 8px;
 }
+
 .product-card img {
   width: 100%;
   border-radius: 12px;
   object-fit: cover;
 }
-.product-title { font-size: 13px; font-weight: 600; }
-.product-price { font-size: 13px; color: #7dd3fc; }
+
+.product-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.product-price {
+  font-size: 13px;
+  color: #7dd3fc;
+}
+
 .product-link {
   padding: 8px;
-  background: linear-gradient(135deg, #4f46e5, #22c1c3);
+  background: linear-gradient(135deg, #14b8a6, #22d3ee);
   border-radius: 999px;
   text-align: center;
-  color: white;
+  color: #001018;
   text-decoration: none;
   font-size: 13px;
+}
+
+/* 🔥 QUICK ACTIONS – TAM ORTA */
+.quick-actions {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+  max-width: 600px;
+  padding: 20px;
+  z-index: 10;
+}
+
+.quick-actions button {
+  background: linear-gradient(135deg, #14b8a6, #22d3ee);
+  border: none;
+  color: #001018;
+  padding: 10px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.quick-actions button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(34,211,238,0.35);
 }
 </style>
 </head>
 
 <body>
-<div class="header" id="shopName">Alışveriş’te Yapay Zekanız</div>
-<div class="chat" id="chat"></div>
-<div class="quick-actions" id="quickActions">
 
+<div class="header" id="shopName">Alışveriş’te Yapay Zekanız</div>
+
+<div class="chat" id="chat"></div>
+
+<!-- 🔥 ORTA BUTONLAR -->
+<div class="quick-actions" id="quickActions">
   <button onclick="quickSend('Bana ürün öner')">⭐ Bana ürün öner</button>
   <button onclick="quickSend('Kombin önerisi iste')">👗 Kombin öner</button>
   <button onclick="quickSend('Spor ayakkabı öner')">👟 Spor ayakkabı</button>
@@ -140,11 +202,22 @@ const shopId = "${shopId}";
 const chat = document.getElementById("chat");
 const input = document.getElementById("msgInput");
 const sendBtn = document.getElementById("sendBtn");
+const quickActions = document.getElementById("quickActions");
 
 let sessionId = localStorage.getItem("sessionId");
 if (!sessionId) {
   sessionId = crypto.randomUUID();
   localStorage.setItem("sessionId", sessionId);
+}
+
+function hideQuickActions() {
+  if (quickActions) quickActions.style.display = "none";
+}
+
+function quickSend(text) {
+  input.value = text;
+  hideQuickActions();
+  sendMessage();
 }
 
 function addBubble(text, sender) {
@@ -205,6 +278,7 @@ async function sendMessage() {
   const text = input.value.trim();
   if (!text) return;
 
+  hideQuickActions();
   addBubble(text, "user");
   input.value = "";
 
@@ -212,19 +286,15 @@ async function sendMessage() {
     const res = await fetch(\`/api/assistant/\${shopId}\`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: text,
-        sessionId
-      })
+      body: JSON.stringify({ message: text, sessionId })
     });
 
     const data = await res.json();
-
     if (data.reply) addBubble(data.reply, "ai");
     if (Array.isArray(data.products) && data.products.length) {
       addProducts(data.products);
     }
-  } catch (e) {
+  } catch {
     addBubble("Bağlantı hatası oluştu.", "ai");
   }
 }
@@ -243,6 +313,7 @@ fetch(\`/api/shop/public/\${shopId}\`)
 
 addBubble("Merhaba 👋 Nasıl yardımcı olabilirim?", "ai");
 </script>
+
 </body>
 </html>`;
 
