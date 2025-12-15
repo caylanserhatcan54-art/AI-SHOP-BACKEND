@@ -3,6 +3,7 @@ import express from "express";
 import cors from "cors";
 import assistantRouter from "./routes/assistant.js";
 import chatPage from "./routes/chatPage.js";
+import productRoutes from "./routes/productImport.js";
 const app = express();
 /* ===============================
    MIDDLEWARES
@@ -26,6 +27,11 @@ app.use("/chat", chatPage);
    POST /api/assistant/:shopId
 ================================ */
 app.use("/api/assistant", assistantRouter);
+/* ===============================
+   PRODUCT IMPORT API  ✅
+   POST /api/product/import
+================================ */
+app.use("/api/product", productRoutes);
 /* ===============================
    START SERVER
 ================================ */
