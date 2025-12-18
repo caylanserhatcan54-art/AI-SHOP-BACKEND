@@ -125,6 +125,23 @@ const STOPWORDS = new Set(
     "yaaa",
     "şey",
     "sey",
+        "please",
+    "can",
+    "could",
+    "would",
+    "show",
+    "find",
+    "search",
+    "looking",
+    "look",
+    "want",
+    "need",
+    "for",
+    "me",
+    "something",
+    "anything",
+    "recommend",
+    "suggest",
   ].map(n)
 );
 
@@ -304,8 +321,11 @@ function extractReviews(p: Product): string[] {
 
 function wantsReviews(msg: string): boolean {
   const t = n(msg);
-  return /(yorum|yorumlar|degerlendirme|değerlendirme|puan|kullananlar|yorumlari|yorumları)/i.test(t);
-}
+  return /(yorum|yorumlar|degerlendirme|değerlendirme|puan|kullananlar|review|reviews|rating|comments)/i.test(t);
+return true;
+  }
+
+
 
 /* =========================================================
    MEMORY (Firestore)
@@ -371,7 +391,7 @@ function smallTalkReply(msg: string, userName?: string | null): string {
   const t = n(msg);
   const name = userName ? ` ${userName}` : "";
 
-  if (/(merhaba|selam|slm|hey|sa|selamun aleykum)/i.test(t)) {
+  if (/(merhaba|selam|slm|sa|selamun aleykum|hello|hi|hey|good morning|good evening)/i.test(t)) {
     return pick([
       `Merhaba${name} 👋 Bugün ne arıyorsun? İstersen ürün adı veya kategori yazabilirsin.`,
       `Selam${name}! Bana “siyah spor ayakkabı”, “matkap”, “kedi maması” gibi yaz, mağazada bulup göstereyim.`,
@@ -379,7 +399,7 @@ function smallTalkReply(msg: string, userName?: string | null): string {
     ]);
   }
 
-  if (/(nasilsin|naber|iyi misin|keyifler)/i.test(t)) {
+  if (/(nasilsin|naber|iyi misin|keyifler|how are you|how r you|how are u)/i.test(t)) {
     return pick([
       `İyiyim${name} 😊 Teşekkürler. Ne bakıyorsun, birlikte bulalım.`,
       `Buradayım${name}. Ürün adı, renk, bütçe söylersen daha hızlı daraltırım.`,
@@ -414,12 +434,12 @@ function smallTalkReply(msg: string, userName?: string | null): string {
 
 function isOutfitIntent(msg: string): boolean {
   const t = n(msg);
-  return /(kombin|outfit|stil öner|ne giysem|takım yap|uyumlu)/i.test(t);
+  return /(kombin|outfit|stil öner|ne giysem|takım yap|uyumlu|style suggestion|what should i wear|outfit idea)/i.test(t);
 }
 
 function isRecommendIntent(msg: string): boolean {
   const t = n(msg);
-  return /(urun oner|ürün öner|bana urun|bana ürün|onerir misin|önerir misin|öner|oner|populer|popüler)/i.test(t);
+  return /(urun oner|ürün öner|bana urun|bana ürün|onerir misin|önerir misin|öner|oner|populer|popüler|recommend|recommend me|suggest|suggest a product|any recommendation)/i.test(t);
 }
 
 function isHowToIntent(msg: string): boolean {
@@ -758,16 +778,21 @@ function howToReply(userMsg: string, maybeProductType: string | null): string {
 export async function processChatMessage(shopId: string, sessionId: string, message: string): Promise<ChatResult> {
   const msg = (message || "").trim();
   const scope: QuestionScope = detectQuestionScope(msg);
-
-  if (!shopId) {
-    return {
-      reply: "Mağaza bilgisi eksik görünüyor. Biraz sonra tekrar dener misin?",
-      products: [],
-    };
-  }
-
-  // ✅ MEMORY EN BAŞTA
   const memory = await loadMemory(shopId, sessionId);
+
+if (/(merhaba|selam|slm|sa|hello|hi|hey|good morning|good evening)/i.test(n(msg))) {
+  return {
+    reply: smallTalkReply(msg, memory.userName),
+    products: [],
+  };
+}
+
+if (!shopId) {
+  return {
+    reply: "Mağaza bilgisi eksik görünüyor. Biraz sonra tekrar dener misin?",
+    products: [],
+  };
+}
 
   // 🔹 Kararsız / yönlendirme cümleleri
   const GUIDANCE_PATTERNS =
@@ -786,7 +811,8 @@ export async function processChatMessage(shopId: string, sessionId: string, mess
   }
 
   // 🔹 Değerlendirme / kullanım senaryosu soruları
-  const EVALUATION_PATTERNS = /(buna değer mi|ofiste kullanılır mı|ev için uygun mu|iş görür mü|alınır mı|mantıklı mı)/i;
+  const EVALUATION_PATTERNS =
+  /(buna değer mi|ofiste kullanılır mı|ev için uygun mu|iş görür mü|alınır mı|mantıklı mı|is it worth|worth buying|should i buy|is it good)/i;
 
   if (EVALUATION_PATTERNS.test(msg) && memory.lastSeenProductTitle) {
     return {
@@ -801,7 +827,8 @@ export async function processChatMessage(shopId: string, sessionId: string, mess
   }
 
   // 🔹 Uyum soruları (iphone / android / uyumlu mu)
-  const COMPATIBILITY_PATTERNS = /(iphone|android|uyumlu mu|uyar mı|olur mu)/i;
+  const COMPATIBILITY_PATTERNS =
+  /(iphone|android|uyumlu mu|uyar mı|olur mu|compatible|does it fit|works with|supported)/i;
 
   if (COMPATIBILITY_PATTERNS.test(msg) && memory.lastSeenProductTitle) {
     return {

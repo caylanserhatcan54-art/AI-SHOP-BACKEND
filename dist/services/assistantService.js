@@ -90,6 +90,23 @@ const STOPWORDS = new Set([
     "yaaa",
     "şey",
     "sey",
+    "please",
+    "can",
+    "could",
+    "would",
+    "show",
+    "find",
+    "search",
+    "looking",
+    "look",
+    "want",
+    "need",
+    "for",
+    "me",
+    "something",
+    "anything",
+    "recommend",
+    "suggest",
 ].map(n));
 function normalizeWord(word) {
     return word
@@ -250,7 +267,8 @@ function extractReviews(p) {
 }
 function wantsReviews(msg) {
     const t = n(msg);
-    return /(yorum|yorumlar|degerlendirme|değerlendirme|puan|kullananlar|yorumlari|yorumları)/i.test(t);
+    return /(yorum|yorumlar|degerlendirme|değerlendirme|puan|kullananlar|review|reviews|rating|comments)/i.test(t);
+    return true;
 }
 /* =========================================================
    MEMORY (Firestore)
@@ -311,14 +329,14 @@ function detectAndSaveName(message) {
 function smallTalkReply(msg, userName) {
     const t = n(msg);
     const name = userName ? ` ${userName}` : "";
-    if (/(merhaba|selam|slm|hey|sa|selamun aleykum)/i.test(t)) {
+    if (/(merhaba|selam|slm|sa|selamun aleykum|hello|hi|hey|good morning|good evening)/i.test(t)) {
         return pick([
             `Merhaba${name} 👋 Bugün ne arıyorsun? İstersen ürün adı veya kategori yazabilirsin.`,
             `Selam${name}! Bana “siyah spor ayakkabı”, “matkap”, “kedi maması” gibi yaz, mağazada bulup göstereyim.`,
             `Hoş geldin${name} 😊 Ürün arayalım mı, yoksa kombin/öneri mi istersin?`,
         ]);
     }
-    if (/(nasilsin|naber|iyi misin|keyifler)/i.test(t)) {
+    if (/(nasilsin|naber|iyi misin|keyifler|how are you|how r you|how are u)/i.test(t)) {
         return pick([
             `İyiyim${name} 😊 Teşekkürler. Ne bakıyorsun, birlikte bulalım.`,
             `Buradayım${name}. Ürün adı, renk, bütçe söylersen daha hızlı daraltırım.`,
@@ -348,11 +366,11 @@ function smallTalkReply(msg, userName) {
 ========================================================= */
 function isOutfitIntent(msg) {
     const t = n(msg);
-    return /(kombin|outfit|stil öner|ne giysem|takım yap|uyumlu)/i.test(t);
+    return /(kombin|outfit|stil öner|ne giysem|takım yap|uyumlu|style suggestion|what should i wear|outfit idea)/i.test(t);
 }
 function isRecommendIntent(msg) {
     const t = n(msg);
-    return /(urun oner|ürün öner|bana urun|bana ürün|onerir misin|önerir misin|öner|oner|populer|popüler)/i.test(t);
+    return /(urun oner|ürün öner|bana urun|bana ürün|onerir misin|önerir misin|öner|oner|populer|popüler|recommend|recommend me|suggest|suggest a product|any recommendation)/i.test(t);
 }
 function isHowToIntent(msg) {
     const t = n(msg);
@@ -655,14 +673,19 @@ function howToReply(userMsg, maybeProductType) {
 export async function processChatMessage(shopId, sessionId, message) {
     const msg = (message || "").trim();
     const scope = detectQuestionScope(msg);
+    const memory = await loadMemory(shopId, sessionId);
+    if (/(merhaba|selam|slm|sa|hello|hi|hey|good morning|good evening)/i.test(n(msg))) {
+        return {
+            reply: smallTalkReply(msg, memory.userName),
+            products: [],
+        };
+    }
     if (!shopId) {
         return {
             reply: "Mağaza bilgisi eksik görünüyor. Biraz sonra tekrar dener misin?",
             products: [],
         };
     }
-    // ✅ MEMORY EN BAŞTA
-    const memory = await loadMemory(shopId, sessionId);
     // 🔹 Kararsız / yönlendirme cümleleri
     const GUIDANCE_PATTERNS = /(kararsız|ne alacağımı bilmiyorum|emin değilim|önerir misin|ne önerirsin|fikir ver|yardımcı olur musun)/i;
     if (GUIDANCE_PATTERNS.test(msg)) {
@@ -676,7 +699,7 @@ export async function processChatMessage(shopId, sessionId, message) {
         };
     }
     // 🔹 Değerlendirme / kullanım senaryosu soruları
-    const EVALUATION_PATTERNS = /(buna değer mi|ofiste kullanılır mı|ev için uygun mu|iş görür mü|alınır mı|mantıklı mı)/i;
+    const EVALUATION_PATTERNS = /(buna değer mi|ofiste kullanılır mı|ev için uygun mu|iş görür mü|alınır mı|mantıklı mı|is it worth|worth buying|should i buy|is it good)/i;
     if (EVALUATION_PATTERNS.test(msg) && memory.lastSeenProductTitle) {
         return {
             reply: `Bu ürünle ilgili kısa bir değerlendirme yapayım 👇\n\n` +
@@ -688,7 +711,7 @@ export async function processChatMessage(shopId, sessionId, message) {
         };
     }
     // 🔹 Uyum soruları (iphone / android / uyumlu mu)
-    const COMPATIBILITY_PATTERNS = /(iphone|android|uyumlu mu|uyar mı|olur mu)/i;
+    const COMPATIBILITY_PATTERNS = /(iphone|android|uyumlu mu|uyar mı|olur mu|compatible|does it fit|works with|supported)/i;
     if (COMPATIBILITY_PATTERNS.test(msg) && memory.lastSeenProductTitle) {
         return {
             reply: `Bu ürünün **${memory.lastSeenProductTitle}** modeli için konuşursak:\n\n` +
