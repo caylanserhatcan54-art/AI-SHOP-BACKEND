@@ -363,22 +363,38 @@ function smallTalkReply(msg, userName) {
 }
 /* =========================================================
    INTENT DETECTION (kombin / öneri / nasıl yapılır)
+   - Günlük mağaza dili eklendi
+   - Mantık aynı, sadece kelime havuzu genişletildi
 ========================================================= */
 function isOutfitIntent(msg) {
     const t = n(msg);
-    return /(kombin|outfit|stil öner|ne giysem|takım yap|uyumlu|style suggestion|what should i wear|outfit idea)/i.test(t);
+    return /(kombin|outfit|stil öner|stil oner|ne giysem|ne giymeliyim|takım yap|uyumlu|buna ne gider|üstüne ne gider|altına ne gider|birlikte nasıl olur|yakışır mı|uyar mı|style suggestion|what should i wear|outfit idea)/i.test(t);
 }
 function isRecommendIntent(msg) {
     const t = n(msg);
-    return /(urun oner|ürün öner|bana urun|bana ürün|onerir misin|önerir misin|öner|oner|populer|popüler|recommend|recommend me|suggest|suggest a product|any recommendation)/i.test(t);
+    return /(urun oner|ürün öner|bana urun|bana ürün|onerir misin|önerir misin|oner|öner|ne önerirsin|ne alsam|populer|popüler|çok satılan|en cok satilan|en çok satılan|tavsiye|tavsiye et|bana bir sey oner|bana bir şey öner|recommend|recommend me|suggest|suggest a product|any recommendation)/i.test(t);
 }
 function isHowToIntent(msg) {
     const t = n(msg);
-    return /(nasil giyilir|nasıl giyilir|nasil kullanilir|nasıl kullanılır|nasil takilir|nasıl takılır|nasil temizlenir|nasıl temizlenir|beden nasil|beden nasıl|kalip nasil|kalıp nasıl|montaj|kurulum)/i.test(t);
+    return /(nasil giyilir|nasıl giyilir|nasil kullanilir|nasıl kullanılır|nasil takilir|nasıl takılır|nasil temizlenir|nasıl temizlenir|nasil olur|nasıl olur|beden nasil|beden nasıl|kalip nasil|kalıp nasıl|dar mi|genis mi|geniş mi|montaj|kurulum|nasil ayarlanir|nasıl ayarlanır|nasil durur|nasıl durur)/i.test(t);
 }
+/* =========================================================
+   DAILY SHOP TALK (Human-like matching phrases)
+========================================================= */
+const MATCHING_PATTERNS = /(ustune ne gider|üstüne ne gider|altina ne gider|altına ne gider|bununla ne gider|buna ne uyar|uyumlu ne var|yanina ne olur|yanına ne olur|yakisir mi|yakışır mı)/i;
 /* =========================================================
    FEATURE EXTRACTION (basit, LLM yok)
 ========================================================= */
+const SELLER_TONE_PHRASES = [
+    "Bu model daha çok tercih ediliyor.",
+    "Buna bakanlar genelde şunu da alıyor.",
+    "Günlük kullanım için daha rahat olur.",
+    "Bu tarzda en çok satılanlardan.",
+    "Fiyatına göre gayet iyi bir ürün.",
+    "Kalite olarak üzmez.",
+    "Bu kombin daha şık durur.",
+    "Bence bu seçenek daha mantıklı.",
+];
 const FEATURE_KEYWORDS = [
     "ortopedik",
     "su geçirmez",
@@ -686,15 +702,16 @@ export async function processChatMessage(shopId, sessionId, message) {
             products: [],
         };
     }
-    // 🔹 Kararsız / yönlendirme cümleleri
-    const GUIDANCE_PATTERNS = /(kararsız|ne alacağımı bilmiyorum|emin değilim|önerir misin|ne önerirsin|fikir ver|yardımcı olur musun)/i;
+    // 🔹 Kararsız / yönlendirme cümleleri (insan gibi konuşma)
+    const GUIDANCE_PATTERNS = /(kararsız|ne alacağımı bilmiyorum|emin değilim|önerir misin|ne önerirsin|fikir ver|yardımcı olur musun|hangisi daha güzel|hangisi iyi|hangisini alayım|bunu mu alsam|sence hangisi|bu mu daha iyi|sen olsan hangisini alırdın|kararsız kaldım|seçemedim|aklım karıştı)/i;
     if (GUIDANCE_PATTERNS.test(msg)) {
         return {
-            reply: "Sorun değil 🙂 Sana daha iyi yardımcı olmam için birkaç kısa soru sorayım:\n\n" +
-                "• Ne için kullanacaksın? (ev / iş / günlük / hediye)\n" +
-                "• Yaklaşık bir bütçe var mı?\n" +
-                "• Spor mu, şık mı, yoksa fark etmez mi?\n\n" +
-                "Bunlardan birini yazman yeterli.",
+            reply: "Sorun değil 🙂 birlikte netleştirelim.\n\n" +
+                "Şunlardan birini yazman yeterli 👇\n\n" +
+                "• Ne için kullanacaksın? (günlük / iş / özel gün / hediye)\n" +
+                "• Daha çok spor mu olsun, şık mı?\n" +
+                "• Yaklaşık bir bütçe var mı?\n\n" +
+                "Bunlardan birini yaz, ben sana en mantıklı seçenekleri çıkarayım.",
             products: [],
         };
     }
@@ -764,6 +781,32 @@ export async function processChatMessage(shopId, sessionId, message) {
         return {
             reply: `İşte ${p.title} için bazı yorumlar:\n\n${top.join("\n")}\n\nİstersen “daha fazla yorum” yaz, biraz daha çıkarayım.`,
             products: [],
+        };
+    }
+    if (MATCHING_PATTERNS.test(msg) && memory.lastSeenProductId) {
+        const p = allProducts.find(x => x.id === memory.lastSeenProductId);
+        if (!p) {
+            return {
+                reply: "Bununla uyumlu ürünlere bakabilmem için önce bir ürün seçelim 😊",
+                products: [],
+            };
+        }
+        const group = detectGroup(p);
+        let targetGroups = [];
+        if (group === "ayakkabi")
+            targetGroups = ["ust", "alt", "aksesuar"];
+        else if (group === "ust")
+            targetGroups = ["alt", "ayakkabi"];
+        else if (group === "alt")
+            targetGroups = ["ust", "ayakkabi"];
+        const related = allProducts.filter(x => targetGroups.includes(detectGroup(x)));
+        const formatted = formatProducts(related, shown, 6);
+        memory.shownProductIds = Array.from(shown);
+        await saveMemory(shopId, sessionId, memory);
+        return {
+            reply: "Buna uyumlu olabilecek birkaç parça çıkardım 👇\n" +
+                "İstersen renk veya tarz söyle, daha da netleştireyim.",
+            products: formatted,
         };
     }
     // 2) “kombin öner”
@@ -934,7 +977,7 @@ export async function processChatMessage(shopId, sessionId, message) {
     if (intro)
         replyParts.push(intro);
     replyParts.push("");
-    replyParts.push(askNext);
+    replyParts.splice(2, 0, pick(SELLER_TONE_PHRASES));
     if (hasReviews && !wantsReviews(msg)) {
         replyParts.push("Bu ürünlerin bazılarında yorum var. İstersen “yorumları göster” yaz, 3-5 tanesini çıkarayım.");
     }
